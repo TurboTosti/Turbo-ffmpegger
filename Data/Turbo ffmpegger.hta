@@ -1,0 +1,2685 @@
+<html>
+<head>
+<title>Turbo ffmpegger</title>
+<HTA:APPLICATION
+  ID="FFmpegBatch"
+  APPLICATIONNAME="Turbo ffmpegger"
+  CAPTION="yes"
+  SHOWINTASKBAR="yes"
+  SINGLEINSTANCE="yes"
+  WINDOWSTATE="normal"
+  SCROLL="no"
+  INNERBORDER="no"
+  SELECTION="no"
+  CONTEXTMENU="no"
+  DROPENABLED="yes"
+/>
+<meta http-equiv="X-UA-Compatible" content="IE=9" />
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: Segoe UI, sans-serif;
+  font-size: 12px;
+  overflow: hidden;
+}
+
+/* Fixed-size root that gets zoomed for the UI-scale feature. All regions
+   are positioned relative to THIS box (980x700), so zoom scales the whole
+   layout uniformly without the viewport double-counting that broke 2x. */
+#app-root {
+  position: absolute;
+  top: 0; left: 0;
+  width: 980px; height: 700px;
+  overflow: hidden;
+}
+
+/* ── Header ── */
+#header {
+  position: absolute;
+  top: 0; left: 0;
+  width: 980px; height: 42px;
+  display: table;
+}
+#header-inner { display:table-row; width:100%; }
+#app-title {
+  display: table-cell;
+  font-size: 13px; font-weight: 700;
+  letter-spacing: .03em;
+  vertical-align: middle;
+  padding: 0 14px;
+  white-space: nowrap; width: 1px;
+}
+#header-mid { display: table-cell; vertical-align: middle; }
+#header-btns {
+  display: table-cell; text-align: right;
+  vertical-align: middle; padding-right: 10px;
+  white-space: nowrap; width: 1px;
+}
+#header-btns button {
+  background: none; font-size: 11px; padding: 3px 10px;
+  cursor: pointer; font-family: Segoe UI, sans-serif; margin-left: 6px;
+}
+
+/* ── Toolbar pinned to bottom ── */
+#toolbar {
+  position: absolute;
+  bottom: 0; left: 0;
+  width: 980px; height: 46px;
+}
+
+/* ── Body layout (between header and toolbar: 700-42-46 = 612) ── */
+#body-wrap {
+  position: absolute;
+  top: 42px; left: 0;
+  width: 980px; height: 612px;
+}
+
+/* ── Sidebar ── */
+#sidebar {
+  position: absolute;
+  top: 0; left: 0;
+  width: 240px; height: 612px;
+  overflow: hidden;
+  border-right-width: 1px; border-right-style: solid;
+}
+#sidebar-top {
+  position: absolute; top: 0; left: 0;
+  width: 240px; height: 84px;
+  padding: 8px 8px 6px;
+  border-bottom-width:1px; border-bottom-style:solid;
+}
+#search-box {
+  width: 100%; font-size: 11px;
+  font-family: Segoe UI, sans-serif;
+  padding: 4px 8px; outline: none;
+  border-width: 1px; border-style: solid;
+}
+#fav-filter, #compat-filter {
+  margin-top: 5px; font-size: 10px; cursor: pointer;
+  padding: 1px 0; display: block;
+}
+#preset-list {
+  position: absolute;
+  top: 84px; bottom: 40px; left: 0;
+  width: 240px;
+  overflow-y: scroll;
+}
+.group-header {
+  font-size: 9px; font-weight: 700; letter-spacing: .12em;
+  text-transform: uppercase; padding: 8px 10px 4px;
+}
+.preset-item {
+  padding: 7px 8px 7px 10px;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+  display: table; width: 100%;
+}
+.pi-left  { display: table-cell; vertical-align: middle; }
+.pi-right { display: table-cell; vertical-align: middle; text-align: right; width: 22px; }
+.preset-name { font-size: 11.5px; font-weight: 600; }
+.preset-desc { font-size: 10px; margin-top: 1px; line-height: 1.3; }
+.star-btn {
+  background: none; border: none; cursor: pointer;
+  font-size: 14px; padding: 0 1px;
+  font-family: Segoe UI, sans-serif; line-height: 1;
+}
+.row-btn {
+  background: none; border: none; cursor: pointer;
+  font-size: 12px; padding: 0 3px;
+  font-family: Segoe UI, sans-serif; line-height: 1;
+}
+.pi-right { width: 58px; }
+.new-tpl-row { padding: 8px 10px 14px; }
+#btn-newtpl {
+  width: 100%; font-size: 11px; font-weight: 700;
+  padding: 6px 8px; cursor: pointer;
+  font-family: Segoe UI, sans-serif;
+  border-width: 1px; border-style: dashed;
+}
+/* Template editor modal */
+#editor-overlay {
+  display: none; position: absolute;
+  top: 0; left: 0; width: 980px; height: 700px;
+  z-index: 200;
+  background: rgba(0,0,0,0.55);
+}
+#editor-box {
+  position: absolute; top: 50%; left: 50%;
+  width: 520px; margin-left: -260px; margin-top: -235px;
+  border-width: 1px; border-style: solid;
+  padding: 18px 20px;
+}
+#editor-title { font-size: 14px; font-weight: 700; margin-bottom: 14px; }
+.ed-row { margin-bottom: 10px; }
+.ed-cols { display: table; width: 100%; margin-bottom: 10px; }
+.ed-col { display: table-cell; width: 50%; vertical-align: top; padding-right: 10px; }
+.ed-col:last-child { padding-right: 0; }
+#editor-box label { display: block; font-size: 10px; margin-bottom: 3px; }
+#editor-box input, #editor-box select {
+  width: 100%; font-size: 12px; padding: 5px 7px;
+  font-family: Segoe UI, sans-serif; outline: none;
+  border-width: 1px; border-style: solid;
+}
+#editor-btns { margin-top: 16px; text-align: right; }
+#editor-btns button {
+  font-size: 12px; font-weight: 700; padding: 6px 16px;
+  cursor: pointer; font-family: Segoe UI, sans-serif;
+  border-width: 1px; border-style: solid; margin-left: 8px;
+  background: none;
+}
+#sidebar-footer {
+  position: absolute; bottom: 0; left: 0;
+  width: 240px; height: 40px;
+  border-top-width: 1px; border-top-style: solid; padding: 6px 8px;
+}
+#sidebar-footer button {
+  width: 100%; background: none; font-size: 11px; padding: 5px;
+  cursor: pointer; font-family: Segoe UI, sans-serif;
+  border-width: 1px; border-style: solid;
+}
+
+/* ── Main panel ── */
+#main-panel {
+  position: absolute;
+  top: 0; left: 240px;
+  width: 740px; height: 612px;
+  overflow: hidden;
+}
+#dropzone {
+  margin: 12px 12px 0;
+  border-width: 2px; border-style: dashed;
+  padding: 18px 20px; text-align: center;
+}
+#dz-title { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+#dz-sub   { font-size: 11px; }
+#dz-browse {
+  margin-top: 8px; background: none; font-size: 11px; padding: 3px 14px;
+  cursor: pointer; font-family: Segoe UI, sans-serif; display: inline-block;
+  border-width: 1px; border-style: solid;
+}
+
+/* Output row */
+#output-row { padding: 8px 12px 0; display: table; width: 100%; }
+#output-row label { font-size: 10px; display: block; margin-bottom: 3px; }
+#out-inner { display: table; width: 100%; }
+#out-path-cell { display: table-cell; }
+#out-path {
+  display: block; width: 100%; font-size: 11px;
+  font-family: Consolas, monospace; padding: 4px 8px;
+  border-width: 1px; border-style: solid;
+  white-space: nowrap; overflow: hidden;
+}
+#out-btn-cell { display: table-cell; width: 1px; white-space: nowrap; padding-left: 6px; }
+#out-btn-cell button {
+  background: none; font-size: 11px; padding: 4px 10px;
+  cursor: pointer; font-family: Segoe UI, sans-serif;
+  white-space: nowrap; margin-left: 4px;
+  border-width: 1px; border-style: solid;
+}
+
+/* Queue */
+#queue-wrap {
+  position: absolute;
+  top: 174px; bottom: 0; left: 0;
+  width: 740px;
+  margin: 0; padding: 0 12px;
+  overflow-y: auto;
+}
+#queue-empty { text-align: center; padding: 30px 20px; font-size: 12px; }
+#queue-empty div:first-child { font-size: 30px; margin-bottom: 6px; opacity: .4; }
+
+.job-row {
+  border-width: 1px; border-style: solid;
+  margin-bottom: 5px; padding: 8px 10px;
+}
+.job-top { display:table; width:100%; }
+.job-name-cell { display:table-cell; vertical-align:middle; overflow:hidden; }
+.job-filename {
+  font-size:12px; font-weight:600;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:360px;
+}
+.job-meta { font-size:10px; margin-top:2px; }
+.job-right { display:table-cell; vertical-align:middle; text-align:right; white-space:nowrap; width:1px; }
+.job-status {
+  font-size:10px; font-weight:700; letter-spacing:.06em;
+  text-transform:uppercase; padding:2px 7px;
+  border-width:1px; border-style:solid;
+}
+.job-btns button {
+  background:none; font-size:10px; padding:2px 8px; cursor:pointer;
+  font-family:Segoe UI,sans-serif; margin-left:4px;
+  border-width:1px; border-style:solid;
+}
+.job-progress { height:4px; margin-top:8px; display:none; overflow:hidden; }
+.job-progress-bar { height:4px; width:0%; }
+.job-timeline {
+  display:none; margin-top:5px; height:18px; position:relative;
+  border-width:1px; border-style:solid; overflow:hidden;
+}
+.job-timeline-fill { position:absolute; top:0; left:0; height:100%; width:0%; opacity:0.2; }
+.job-timeline-label {
+  position:absolute; top:0; left:0; right:0; bottom:0;
+  font-family:Consolas,monospace; font-size:9px; font-weight:700;
+  letter-spacing:.05em; text-align:center; line-height:18px;
+}
+.job-stats {
+  display:none; margin-top:4px; font-family:Consolas,monospace; font-size:10px;
+}
+.job-log-btn {
+  background:none; border:none; font-size:10px; cursor:pointer;
+  font-family:Segoe UI,sans-serif; padding:0;
+  text-decoration:underline; margin-top:4px; display:block;
+}
+.job-log {
+  display:none; margin-top:6px; padding:6px 8px;
+  font-family:Consolas,monospace; font-size:10px;
+  max-height:90px; overflow-y:auto;
+  white-space:pre-wrap; word-break:break-all;
+  border-width:1px; border-style:solid;
+}
+
+/* Toolbar */
+#toolbar {
+  border-top-width:1px; border-top-style:solid;
+  padding: 0 12px; display: table; width: 100%;
+}
+#toolbar-inner { display:table-row; }
+#tally { display:table-cell; vertical-align:middle; font-size:11px; }
+#toolbar-btns { display:table-cell; text-align:right; vertical-align:middle; white-space:nowrap; }
+#toolbar-btns button {
+  background:none; font-size:11px; padding:5px 12px; cursor:pointer;
+  font-family:Segoe UI,sans-serif; margin-left:6px;
+  border-width:1px; border-style:solid;
+}
+#btn-run { font-weight:700 !important; padding:5px 20px !important; }
+#btn-run:disabled { cursor:default !important; opacity:0.38 !important; }
+#btn-stop { display:none; }
+
+/* Settings overlay */
+#settings-panel {
+  display: none; position: absolute;
+  top: 42px; right: 0; width: 260px;
+  max-height: 640px; overflow-y: auto;
+  z-index: 100; padding: 14px;
+  border-width: 1px; border-style: solid; border-top: none;
+}
+#settings-panel.open { display: block; }
+#settings-panel h3 {
+  font-size: 10px; font-weight: 700; letter-spacing: .1em;
+  text-transform: uppercase; margin-bottom: 10px;
+}
+.theme-row { display:table; width:100%; margin-bottom:4px; border-collapse:separate; }
+.theme-row td { display:table-cell; }
+.theme-swatch {
+  display: block; width: 100%; padding: 5px 4px;
+  font-size: 10px; font-weight: 700; text-align: center;
+  cursor: pointer; font-family: Segoe UI, sans-serif;
+  border-width: 2px; border-style: solid; margin: 2px;
+}
+.settings-sep { border-top-width:1px; border-top-style:solid; margin: 10px 0 8px; }
+.settings-panel-btn {
+  display:block; width:100%; background:none; font-size:11px;
+  padding:5px 8px; cursor:pointer; font-family:Segoe UI,sans-serif;
+  text-align:left; margin-bottom:4px;
+  border-width:1px; border-style:solid;
+}
+#ui-scale-row { display:table; width:100%; margin-top:2px; }
+#ui-scale-row td { display:table-cell; vertical-align:middle; }
+#ui-scale-label { font-size:10px; white-space:nowrap; padding-right:8px; }
+.scale-btn {
+  background:none; font-size:11px; font-weight:700; padding:3px 10px;
+  cursor:pointer; font-family:Segoe UI,sans-serif;
+  border-width:1px; border-style:solid; margin-left:4px;
+}
+.scale-btn.active { font-weight:900; }
+
+/* ── ffprobe info strip ── */
+.job-probe {
+  font-family: Consolas, monospace; font-size: 10px;
+  margin-top: 4px; white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis;
+}
+.job-warn {
+  font-size: 10px; font-weight: 700; margin-top: 4px;
+  padding: 2px 6px; display: inline-block;
+}
+.job-estimate {
+  font-family: Consolas, monospace; font-size: 10px;
+  margin-top: 2px;
+}
+
+/* ── Inspect modal ── */
+#inspect-overlay {
+  display: none; position: absolute;
+  top: 0; left: 0; width: 980px; height: 700px;
+  z-index: 300;
+  background: rgba(0,0,0,0.6);
+}
+#inspect-box {
+  position: absolute; top: 50%; left: 50%;
+  width: 580px; margin-left: -290px; margin-top: -260px;
+  border-width: 1px; border-style: solid;
+  padding: 16px 18px;
+}
+#inspect-title { font-size: 13px; font-weight: 700; margin-bottom: 10px; }
+#inspect-body {
+  font-family: Consolas, monospace; font-size: 10px;
+  height: 400px; overflow-y: auto; white-space: pre-wrap;
+  word-break: break-all; padding: 8px;
+  border-width: 1px; border-style: solid;
+}
+#inspect-close {
+  margin-top: 12px; float: right; font-size: 11px; font-weight: 700;
+  padding: 5px 16px; cursor: pointer; font-family: Segoe UI, sans-serif;
+  border-width: 1px; border-style: solid; background: none;
+}
+
+/* ── Preset suggestion badge ── */
+.preset-match {
+  display: inline-block; font-size: 9px; font-weight: 700;
+  padding: 1px 5px; margin-left: 4px;
+  vertical-align: middle; letter-spacing: .04em;
+}
+</style>
+</head>
+<body id="body">
+<div id="app-root">
+
+<div id="header">
+  <table id="header-inner" width="100%"><tr>
+    <td id="app-title"><span id="title-ff">Turbo </span><span id="title-batch">ffmpegger</span></td>
+    <td id="header-mid"></td>
+    <td id="header-btns">
+      <button onclick="editPresets()" id="btn-editpresets">Edit presets.json</button>
+      <button onclick="toggleSettings()" id="btn-settings">&#9881; Settings</button>
+    </td>
+  </tr></table>
+</div>
+
+<div id="settings-panel">
+  <h3 id="settings-title">Colour Theme</h3>
+  <table width="100%">
+    <tr>
+      <td><div class="theme-swatch" id="sw-amber"    onclick="applyTheme('amber')">Amber</div></td>
+      <td><div class="theme-swatch" id="sw-blue"     onclick="applyTheme('blue')">Blue</div></td>
+      <td><div class="theme-swatch" id="sw-green"    onclick="applyTheme('green')">Green</div></td>
+    </tr>
+    <tr>
+      <td><div class="theme-swatch" id="sw-purple"   onclick="applyTheme('purple')">Purple</div></td>
+      <td><div class="theme-swatch" id="sw-red"      onclick="applyTheme('red')">Red</div></td>
+      <td><div class="theme-swatch" id="sw-light"    onclick="applyTheme('light')">Light</div></td>
+    </tr>
+    <tr>
+      <td><div class="theme-swatch" id="sw-cyan"     onclick="applyTheme('cyan')">Cyan</div></td>
+      <td><div class="theme-swatch" id="sw-rose"     onclick="applyTheme('rose')">Rose</div></td>
+      <td><div class="theme-swatch" id="sw-slate"    onclick="applyTheme('slate')">Slate</div></td>
+    </tr>
+    <tr>
+      <td><div class="theme-swatch" id="sw-sand"     onclick="applyTheme('sand')">Sand</div></td>
+      <td><div class="theme-swatch" id="sw-mint"     onclick="applyTheme('mint')">Mint</div></td>
+      <td><div class="theme-swatch" id="sw-midnight" onclick="applyTheme('midnight')">Night</div></td>
+    </tr>
+    <tr>
+      <td><div class="theme-swatch" id="sw-paper"    onclick="applyTheme('paper')">Paper</div></td>
+      <td><div class="theme-swatch" id="sw-sky"      onclick="applyTheme('sky')">Sky</div></td>
+      <td><div class="theme-swatch" id="sw-sage"     onclick="applyTheme('sage')">Sage</div></td>
+    </tr>
+    <tr>
+      <td><div class="theme-swatch" id="sw-hcdark"   onclick="applyTheme('hcdark')">HC Dark</div></td>
+      <td><div class="theme-swatch" id="sw-hclight"  onclick="applyTheme('hclight')">HC Light</div></td>
+      <td><div class="theme-swatch" id="sw-hcamber"  onclick="applyTheme('hcamber')">HC Amber</div></td>
+    </tr>
+  </table>
+  <div class="settings-sep" id="settings-sep"></div>
+  <h3 id="settings-scale-title">UI Scale</h3>
+  <table id="ui-scale-row" width="100%"><tr>
+    <td id="ui-scale-label">Zoom</td>
+    <td style="text-align:right">
+      <button class="scale-btn" id="scale-1x" onclick="applyScale(1)">1x</button>
+      <button class="scale-btn" id="scale-1.5x" onclick="applyScale(1.5)">1.5x</button>
+      <button class="scale-btn" id="scale-2x" onclick="applyScale(2)">2x</button>
+    </td>
+  </tr></table>
+  <div class="settings-sep" id="settings-sep2"></div>
+  <button class="settings-panel-btn" id="sp-editbtn"   onclick="editPresets()">Open presets.json</button>
+  <button class="settings-panel-btn" id="sp-reloadbtn" onclick="reloadPresets()">&#8635; Reload presets</button>
+</div>
+
+<div id="body-wrap">
+  <div id="sidebar">
+    <div id="sidebar-top">
+      <input type="text" id="search-box" placeholder="Filter presets (name, format, quality)..." onkeyup="filterPresets()" />
+      <span id="fav-filter" onclick="toggleFavFilter()">&#9733; Favourites only</span>
+      <span id="compat-filter" onclick="toggleCompatFilter()">&#10003; Compatible only</span>
+    </div>
+    <div id="preset-list"></div>
+    <div id="sidebar-footer">
+      <button id="btn-reload" onclick="reloadPresets()">&#8635; Reload presets</button>
+    </div>
+  </div>
+  <div id="main-panel">
+    <div id="dropzone"
+      ondragenter="return dzEnter(event)" ondragover="return dzOver(event)"
+      ondragleave="dzLeave(event)" ondrop="return dzDrop(event)">
+      <div id="dz-title">&#8659; Drop files here</div>
+      <div id="dz-sub">video &amp; audio files &mdash; or click Browse</div>
+      <button id="dz-browse" onclick="browseFiles()">Browse files&hellip;</button>
+      <input type="file" id="file-input" multiple
+        style="position:absolute;left:-9999px;top:-9999px;opacity:0;"
+        onchange="fileInputChanged()" />
+    </div>
+    <div id="output-row">
+      <label id="out-label">Output folder</label>
+      <div id="out-inner">
+        <div id="out-path-cell">
+          <div id="out-path">&mdash; output subfolder next to each input file &mdash;</div>
+        </div>
+        <div id="out-btn-cell">
+          <button id="btn-pickout" onclick="pickOutputFolder()">Browse&hellip;</button>
+          <button id="btn-resetout" style="display:none" onclick="resetOutput()">&times; Reset</button>
+        </div>
+      </div>
+    </div>
+    <div id="queue-wrap">
+      <div id="queue-empty">
+        <div>&#127916;</div>
+        <div id="empty-text">Drop files and pick a preset to get started</div>
+      </div>
+      <div id="job-list"></div>
+    </div>
+  </div>
+</div>
+
+<div id="toolbar">
+  <table id="toolbar-inner" width="100%"><tr>
+    <td id="tally">No jobs</td>
+    <td id="toolbar-btns">
+      <button id="btn-clear" onclick="clearDone()">Clear done</button>
+      <button id="btn-stop"  onclick="stopAll()">&#9632; Stop all</button>
+      <button id="btn-run"   disabled onclick="startQueue()">&#9654; Convert</button>
+    </td>
+  </tr></table>
+</div>
+
+<div id="editor-overlay">
+  <div id="editor-box">
+    <div id="editor-fields"></div>
+    <div id="editor-btns">
+      <button id="ed-cancel" onclick="closeEditor()">Cancel</button>
+      <button id="ed-save"   onclick="saveEditor()">Save as custom template</button>
+    </div>
+  </div>
+</div>
+<div id="inspect-overlay">
+  <div id="inspect-box">
+    <div id="inspect-title"></div>
+    <div id="inspect-body"></div>
+    <button id="inspect-close" onclick="closeInspect()">Close</button>
+    <div style="clear:both"></div>
+  </div>
+</div>
+
+</div><!-- /app-root -->
+
+<script language="JScript">
+var fso    = new ActiveXObject("Scripting.FileSystemObject");
+var wsh    = new ActiveXObject("WScript.Shell");
+var wshell = new ActiveXObject("Shell.Application");
+
+var presets        = [];
+var customPresets  = [];
+var selectedPreset = null;
+var favourites     = {};
+var jobs           = [];
+var jobCounter     = 0;
+var outputFolder   = "";
+var running        = false;
+var stopRequested  = false;
+var showFavsOnly   = false;
+var compatOnly     = true;
+var editingId      = null;
+var searchTerm     = "";
+var currentTheme   = "amber";
+var currentScale = 1;
+var probeQueue = [];   // paths queued for probing
+var probing    = false; // is a probe bat currently running?
+
+// ── ffprobe integration ──────────────────────────────────
+
+// Return the path to ffprobe.exe (same folder as ffmpeg.exe, or PATH).
+function ffprobePath() {
+  var local = appFolder() + "\\ffprobe.exe";
+  if (fso.FileExists(local)) return '"' + local + '"';
+  return "ffprobe";
+}
+
+// Queue a probe for a job.  Probes run one at a time to avoid
+// spawning a flood of processes when many files are dropped at once.
+function scheduleProbe(job) {
+  probeQueue.push(job);
+  if (!probing) runNextProbe();
+}
+
+function runNextProbe() {
+  if (!probeQueue.length) { probing = false; return; }
+  probing = true;
+  var job = probeQueue.shift();
+  // sequences: probe the first frame file so we at least get resolution/codec
+  var probePath = job.isSequence ? probeSequenceFirstFrame(job) : job.inputPath;
+  if (!probePath) { job.probe = { ok: false }; probing = false; runNextProbe(); return; }
+
+  var tmp = wsh.ExpandEnvironmentStrings("%TEMP%") + "\\ffbatch_probe_" + job.id + ".txt";
+  var bat = wsh.ExpandEnvironmentStrings("%TEMP%") + "\\ffbatch_probe_" + job.id + ".bat";
+  var fp  = ffprobePath();
+  // -v quiet -print_format json -show_streams -show_format
+  var cmd = '@echo off\n' + fp + ' -v quiet -print_format json -show_streams -show_format -i "' + probePath + '" > "' + tmp + '" 2>&1\n';
+  try {
+    var bf = fso.CreateTextFile(bat, true, false);
+    bf.Write(cmd); bf.Close();
+    wsh.Run('"' + bat + '"', 0, false);
+  } catch(e) {
+    job.probe = { ok: false };
+    try { fso.DeleteFile(bat); } catch(_) {}
+    probing = false; runNextProbe(); return;
+  }
+  pollProbe(job, bat, tmp, 0);
+}
+
+function probeSequenceFirstFrame(job) {
+  // job.inputPath is a pattern like C:\foo\frame_%04d.png
+  // Reconstruct the actual first-frame filename from seqStart.
+  try {
+    var pat = job.inputPath;          // e.g.  C:\foo\frame_%04d.png
+    var slash = pat.lastIndexOf("\\");
+    var folder = pat.substring(0, slash);
+    var namePat = pat.substring(slash + 1);
+    // replace printf-style %0Nd or %d with the start number
+    var start = job.seqStart || 0;
+    var first = namePat.replace(/%0(\d+)d/, function(_, w) {
+      var s = "" + start;
+      while (s.length < parseInt(w)) s = "0" + s;
+      return s;
+    }).replace(/%d/, "" + start);
+    var fp = folder + "\\" + first;
+    if (fso.FileExists(fp)) return fp;
+  } catch(_) {}
+  return null;
+}
+
+function pollProbe(job, bat, tmp, ticks) {
+  // wait up to 8 seconds (40 × 200 ms)
+  if (ticks > 40) {
+    job.probe = { ok: false };
+    try { fso.DeleteFile(bat); } catch(_) {}
+    try { fso.DeleteFile(tmp); } catch(_) {}
+    probing = false; runNextProbe(); return;
+  }
+  var done = false;
+  try {
+    if (fso.FileExists(tmp)) {
+      var sz = 0;
+      try { sz = fso.GetFile(tmp).Size; } catch(_) {}
+      if (sz > 0) {
+        // ffprobe writes its full JSON then exits, so once the file has
+        // content and is no longer growing we can read it.
+        done = true;
+        var rf = fso.OpenTextFile(tmp, 1, false);
+        var raw = rf.ReadAll(); rf.Close();
+        job.probe = parseProbeJson(raw, job);
+        // Pre-populate duration for the progress bar
+        if (job.probe.duration > 0 && !job.totalSec) {
+          job.totalSec = job.probe.duration;
+        }
+        renderJobs(); updateRunButton();
+        try { fso.DeleteFile(tmp); } catch(_) {}
+        try { fso.DeleteFile(bat); } catch(_) {}
+      }
+    }
+  } catch(e) {
+    job.probe = { ok: false };
+    done = true;
+  }
+  if (done) {
+    probing = false; runNextProbe();
+  } else {
+    window.setTimeout(function(){ pollProbe(job, bat, tmp, ticks + 1); }, 200);
+  }
+}
+
+// Parse ffprobe's JSON output into a simple object.
+// We do not use JSON.parse (not available in IE/JScript) — we use the same
+// Function() trick as everywhere else in the app.
+function parseProbeJson(raw, job) {
+  var info = { ok: false, width: 0, height: 0, fps: 0, duration: 0,
+               vcodec: "", acodec: "", bitrate: 0, channels: 0,
+               sampleRate: 0, colorSpace: "", pixFmt: "",
+               hasVideo: false, hasAudio: false, rawJson: raw };
+  try {
+    // IE JScript doesn't have JSON.parse; use Function() eval
+    var data = (new Function("return " + raw.replace(/\btrue\b/g,"true").replace(/\bfalse\b/g,"false").replace(/\bnull\b/g,"null")))();
+    if (!data) return info;
+    info.ok = true;
+    // format-level info
+    if (data.format) {
+      if (data.format.duration) info.duration = parseFloat(data.format.duration) || 0;
+      if (data.format.bit_rate) info.bitrate   = parseInt(data.format.bit_rate, 10) || 0;
+    }
+    // streams
+    var streams = data.streams || [];
+    for (var i = 0; i < streams.length; i++) {
+      var s = streams[i];
+      if (s.codec_type === "video" && !info.hasVideo) {
+        info.hasVideo    = true;
+        info.vcodec      = s.codec_name || "";
+        info.width       = s.width  || 0;
+        info.height      = s.height || 0;
+        info.colorSpace  = s.color_space || "";
+        info.pixFmt      = s.pix_fmt || "";
+        // fps: try avg_frame_rate first, then r_frame_rate
+        var fpsStr = s.avg_frame_rate || s.r_frame_rate || "";
+        if (fpsStr && fpsStr.indexOf("/") >= 0) {
+          var parts = fpsStr.split("/");
+          var n = parseFloat(parts[0]), d = parseFloat(parts[1]);
+          if (d > 0) info.fps = Math.round((n / d) * 100) / 100;
+        } else if (fpsStr) {
+          info.fps = parseFloat(fpsStr) || 0;
+        }
+        // duration fallback from stream if format didn't have it
+        if (!info.duration && s.duration) info.duration = parseFloat(s.duration) || 0;
+        // bitrate fallback
+        if (!info.bitrate && s.bit_rate) info.bitrate = parseInt(s.bit_rate, 10) || 0;
+      }
+      if (s.codec_type === "audio" && !info.hasAudio) {
+        info.hasAudio    = true;
+        info.acodec      = s.codec_name || "";
+        info.channels    = s.channels   || 0;
+        info.sampleRate  = parseInt(s.sample_rate, 10) || 0;
+      }
+    }
+  } catch(e) { info.ok = false; info.rawJson = raw + "\n\nPARSE ERROR: " + e.message; }
+  return info;
+}
+
+// ── Pre-flight warnings ──────────────────────────────────
+// Return a warning string (or "") for a job+preset combination.
+function probeWarning(job, preset) {
+  if (!job.probe || !job.probe.ok) return "";
+  var p = job.probe;
+  var warnings = [];
+  // Video preset applied to audio-only file
+  if (!p.hasVideo && preset && preset.args && !/^-vn/i.test(preset.args)) {
+    var hasVCodec = /-c:v|libx264|libx265|prores|dnxhd|libvpx/i.test(preset.args);
+    if (hasVCodec) warnings.push("No video stream — video preset may fail");
+  }
+  // Audio-only preset applied to video file (usually fine, just flag)
+  // Mismatch: target preset has a fixed scale but source is already smaller
+  if (p.hasVideo && preset) {
+    var scaleM = preset.args.match(/-vf\s+scale=(\d+):(\d+)/);
+    if (scaleM) {
+      var tw = parseInt(scaleM[1]), th = parseInt(scaleM[2]);
+      if (tw > 0 && th > 0 && p.width > 0 && p.height > 0) {
+        if (tw > p.width * 1.5 || th > p.height * 1.5) {
+          warnings.push("Upscaling " + p.width + "\xd7" + p.height + " \u2192 " + tw + "\xd7" + th);
+        }
+      }
+    }
+  }
+  // Very high fps source being forced to a low-fps preset
+  if (p.fps > 60 && preset && /fps=\d+|r\s+\d+|-r\s+\d+/.test(preset.args)) {
+    warnings.push("High-fps source (" + p.fps + "fps) with fps-capped preset");
+  }
+  return warnings.join("  \u25aa  ");
+}
+
+// ── Output size estimator ────────────────────────────────
+// Estimate output file size from preset args + probed duration.
+// Returns a human-readable string, or "" if we can't estimate.
+function estimateOutputSize(job, preset) {
+  if (!job.probe || !job.probe.ok || !job.probe.duration) return "";
+  if (!preset || !preset.args) return "";
+  var dur = job.probe.duration;   // seconds
+  var kbps = 0;
+
+  // Audio-only presets: sum audio bitrate
+  if (/^-vn/.test(preset.args) || /\bfla c\b/.test(preset.args)) {
+    var abrM = preset.args.match(/-b:a\s+([\d.]+)\s*([kKmM]?)/);
+    if (abrM) {
+      kbps = parseFloat(abrM[1]);
+      var u = abrM[2].toLowerCase();
+      if (u === "m") kbps *= 1000;
+      // default unit is kbits/s
+    }
+  } else {
+    // CRF encoding: estimate from codec + CRF value
+    var crfM = preset.args.match(/-crf\s+(\d+)/);
+    var abrM2 = preset.args.match(/-b:a\s+([\d.]+)\s*([kKmM]?)/);
+    var aBitrateKbps = 128; // default audio
+    if (abrM2) {
+      aBitrateKbps = parseFloat(abrM2[1]);
+      if ((abrM2[2]||"").toLowerCase() === "m") aBitrateKbps *= 1000;
+    }
+    // Very rough CRF→bitrate heuristic based on codec and resolution
+    if (crfM) {
+      var crf = parseInt(crfM[1]);
+      var pixels = (job.probe.width || 1920) * (job.probe.height || 1080);
+      var isH265 = /libx265|hevc/i.test(preset.args);
+      var isVP9  = /libvpx-vp9/i.test(preset.args);
+      // Base kbps at CRF 20 for 1080p H.264 ≈ 4000 kbps
+      // Scale by resolution and CRF offset
+      var basePx = 1920 * 1080;
+      var baseKbps = isH265 ? 2000 : (isVP9 ? 1800 : 4000);
+      var resScale = pixels / basePx;
+      // Each CRF unit ≈ 12% bitrate change (empirical)
+      var crfOffset = Math.pow(1.12, 20 - crf);
+      kbps = baseKbps * resScale * crfOffset + aBitrateKbps;
+    }
+    // Fixed bitrate (-b:v): use that directly
+    var bvM = preset.args.match(/-b:v\s+([\d.]+)\s*([kKmMgG]?)/);
+    if (bvM) {
+      kbps = parseFloat(bvM[1]);
+      var bvU = (bvM[2]||"").toLowerCase();
+      if (bvU === "m") kbps *= 1000;
+      else if (bvU === "g") kbps *= 1000000;
+      var aBr2M = preset.args.match(/-b:a\s+([\d.]+)\s*([kKmM]?)/);
+      var abr2 = 128;
+      if (aBr2M) { abr2 = parseFloat(aBr2M[1]); if ((aBr2M[2]||"").toLowerCase()==="m") abr2*=1000; }
+      kbps += abr2;
+    }
+    // ProRes / DNxHD / lossless: use known typical bitrates
+    if (/prores_ks.*profile.*3|prores.*hq/i.test(preset.args) || /-profile:v\s+3/.test(preset.args)) kbps = 220000;
+    else if (/prores_ks.*profile.*2|prores_ks/i.test(preset.args)) kbps = 120000;
+    else if (/prores_ks.*profile.*0/i.test(preset.args)) kbps = 45000;
+    else if (/dnxhd/i.test(preset.args)) kbps = 120000;
+    else if (/pcm_s16le|pcm_s24le|flac/i.test(preset.args) && !job.probe.hasVideo) kbps = (job.probe.sampleRate||48000) * (job.probe.channels||2) * 16 / 1000;
+  }
+
+  if (kbps <= 0) return "";
+  var bytes = (kbps * 1000 / 8) * dur;
+  return "\u2248 " + fmtBytes(bytes) + " estimated output";
+}
+
+// ── Preset suggestion scoring ────────────────────────────
+// Returns a score 0-100 for how well a preset matches probed info.
+// Higher = better match.  Used to show "match" badges on top presets.
+var probeMatchScores = {};   // presetId -> score; refreshed when probe completes
+
+function scorePresetForProbe(preset, probe) {
+  if (!probe || !probe.ok) return 0;
+  var score = 0;
+  // Resolution match: exact or very close
+  if (probe.hasVideo && probe.width > 0 && probe.height > 0) {
+    var scaleM = preset.args ? preset.args.match(/-vf\s+scale=(\d+):(\d+)/) : null;
+    if (scaleM) {
+      var pw = parseInt(scaleM[1]), ph = parseInt(scaleM[2]);
+      var diffW = Math.abs(pw - probe.width), diffH = Math.abs(ph - probe.height);
+      if (diffW === 0 && diffH === 0) score += 40;
+      else if (diffW <= 4 && diffH <= 4) score += 35;
+      else if (diffW < probe.width * 0.1) score += 15;
+      // Slight bonus for downscaling (common workflow)
+      if (pw <= probe.width && ph <= probe.height) score += 5;
+    } else {
+      // "keep size" preset — good match if source doesn't need resizing
+      score += 20;
+    }
+  }
+  // Codec affinity
+  if (probe.hasVideo) {
+    var vc = probe.vcodec ? probe.vcodec.toLowerCase() : "";
+    var pa = (preset.args || "").toLowerCase();
+    // H.264 source → H.264 or H.265 output are natural choices
+    if ((vc === "h264" || vc === "avc") && /libx264|libx265/.test(pa)) score += 15;
+    // ProRes source → ProRes output
+    if (vc === "prores" && /prores_ks/.test(pa)) score += 25;
+    // Already compressed → "keep size" is a natural option
+    if ((vc === "h264" || vc === "hevc") && !/-vf\s+scale/.test(pa)) score += 8;
+  }
+  // Audio-only preset for audio-only file
+  if (!probe.hasVideo && /^-vn/.test(preset.args || "")) score += 50;
+  // Image sequence file → Image Sequence presets
+  return score;
+}
+
+function refreshMatchScores(jobs) {
+  // Find the dominant probe (first probed job with ok=true)
+  var probe = null;
+  for (var i = 0; i < jobs.length; i++) {
+    if (jobs[i].probe && jobs[i].probe.ok) { probe = jobs[i].probe; break; }
+  }
+  probeMatchScores = {};
+  if (!probe) return;
+  var src = allPresets();
+  // Score every preset and keep only the top 3 non-zero
+  var scored = [];
+  for (var j = 0; j < src.length; j++) {
+    var sc = scorePresetForProbe(src[j], probe);
+    if (sc > 0) scored.push({ id: src[j].id, score: sc });
+  }
+  scored.sort(function(a,b){ return b.score - a.score; });
+  var topN = Math.min(3, scored.length);
+  for (var k = 0; k < topN; k++) {
+    if (scored[k].score >= 20) probeMatchScores[scored[k].id] = scored[k].score;
+  }
+}
+
+// ── Inspect modal ────────────────────────────────────────
+function openInspect(jobId) {
+  var job = null;
+  for (var i = 0; i < jobs.length; i++) { if (jobs[i].id === jobId) { job = jobs[i]; break; } }
+  if (!job) return;
+  var t = getT();
+  var ov = document.getElementById("inspect-overlay");
+  var box = document.getElementById("inspect-box");
+  var title = document.getElementById("inspect-title");
+  var body  = document.getElementById("inspect-body");
+  if (!ov) return;
+
+  var displayTitle = job.filename + (job.probe && job.probe.ok ? "" : " — probe unavailable");
+  title.innerText = displayTitle;
+  title.style.color = t.ac;
+  box.style.background   = t.surf;
+  box.style.borderColor  = t.bordHi;
+  box.style.color        = t.text;
+  body.style.background  = t.logBg;
+  body.style.borderColor = t.bord;
+  body.style.color       = t.muted;
+
+  var closeBtn = document.getElementById("inspect-close");
+  if (closeBtn) {
+    closeBtn.style.borderColor = t.bord;
+    closeBtn.style.color       = t.muted;
+  }
+
+  if (!job.probe) {
+    body.innerText = "Probe has not run yet. ffprobe.exe must be in the same folder as ffmpeg.exe.";
+  } else if (!job.probe.ok) {
+    body.innerText = job.probe.rawJson || "ffprobe could not read this file.\n\nMake sure ffprobe.exe is present next to ffmpeg.exe.";
+  } else {
+    // Pretty-print: summary block first, then full JSON
+    var p = job.probe;
+    var lines = [];
+    lines.push("=== SUMMARY ===");
+    if (p.hasVideo) {
+      lines.push("Video : " + p.vcodec + "  " + p.width + "\xd7" + p.height
+        + "  " + p.fps + " fps"
+        + (p.colorSpace ? "  " + p.colorSpace : "")
+        + (p.pixFmt     ? "  (" + p.pixFmt + ")" : ""));
+    }
+    if (p.hasAudio) {
+      lines.push("Audio : " + p.acodec
+        + (p.sampleRate ? "  " + Math.round(p.sampleRate/1000) + " kHz" : "")
+        + (p.channels   ? "  " + p.channels + "ch" : ""));
+    }
+    if (p.duration) lines.push("Duration : " + fmtSec(p.duration));
+    if (p.bitrate)  lines.push("Bitrate  : " + fmtBytes(p.bitrate / 8) + "/s  (" + Math.round(p.bitrate / 1000) + " kbps)");
+    var srcSize = 0;
+    try { if (fso.FileExists(job.inputPath) || job.isSequence) {
+      if (!job.isSequence) srcSize = fso.GetFile(job.inputPath).Size;
+    } } catch(_) {}
+    if (srcSize) lines.push("File size: " + fmtBytes(srcSize));
+    lines.push("");
+    lines.push("=== FULL FFPROBE JSON ===");
+    lines.push(p.rawJson || "(no data)");
+    body.innerText = lines.join("\n");
+  }
+
+  ov.style.display = "block";
+}
+
+function closeInspect() {
+  var ov = document.getElementById("inspect-overlay");
+  if (ov) ov.style.display = "none";
+}
+
+// ── FPS hint for image sequences ─────────────────────────
+// Return a note string if the selected preset lacks explicit fps for a sequence.
+function seqFpsHint(job, preset) {
+  if (!job.isSequence) return "";
+  if (!preset) return "";
+  var ia = preset.inputArgs || "";
+  var a  = preset.args || "";
+  var hasRate = (/-r\s+\d+|-framerate\s+\d+/i.test(ia) || /-r\s+\d+/i.test(a));
+  if (hasRate) return "";
+  // Count frames if available
+  var frameNote = job.seqCount ? "  (" + job.seqCount + " frames)" : "";
+  return "Seq preset has no explicit fps \u2014 will default to 30fps" + frameNote;
+}
+
+
+var THEMES = {
+  amber: {
+    bg:"#141414", surf:"#1e1e1e", surf2:"#1a1a1a", bord:"#2c2c2c", bordHi:"#3e3e3e",
+    text:"#e2e2e2", muted:"#666666", ac:"#e8a020", acText:"#000000",
+    ok:"#4caf7d", err:"#e05454", logBg:"#111111",
+    starOff:"#3e3e3e", starOn:"#f0c020"
+  },
+  blue: {
+    bg:"#0f1923", surf:"#162030", surf2:"#131c29", bord:"#1e2e40", bordHi:"#2a3e55",
+    text:"#ddeeff", muted:"#5a7a99", ac:"#4a9eff", acText:"#000000",
+    ok:"#4caf7d", err:"#e05454", logBg:"#0a1520",
+    starOff:"#2a3e55", starOn:"#f0c020"
+  },
+  green: {
+    bg:"#0f1a14", surf:"#162218", surf2:"#131f16", bord:"#1e3025", bordHi:"#2a4033",
+    text:"#d4edda", muted:"#507a5e", ac:"#4caf7d", acText:"#000000",
+    ok:"#4caf7d", err:"#e05454", logBg:"#0a150e",
+    starOff:"#2a4033", starOn:"#f0c020"
+  },
+  purple: {
+    bg:"#13101e", surf:"#1c1729", surf2:"#181326", bord:"#2a2040", bordHi:"#3a2f55",
+    text:"#e8deff", muted:"#6a5a99", ac:"#a374f7", acText:"#000000",
+    ok:"#4caf7d", err:"#e05454", logBg:"#0e0b18",
+    starOff:"#3a2f55", starOn:"#f0c020"
+  },
+  red: {
+    bg:"#1a0f0f", surf:"#251515", surf2:"#201212", bord:"#3a1e1e", bordHi:"#502a2a",
+    text:"#f0dede", muted:"#8a5a5a", ac:"#e05454", acText:"#ffffff",
+    ok:"#4caf7d", err:"#e05454", logBg:"#130a0a",
+    starOff:"#502a2a", starOn:"#f0c020"
+  },
+  light: {
+    bg:"#f0f0ec", surf:"#ffffff", surf2:"#f5f5f0", bord:"#d0d0cc", bordHi:"#b0b0a8",
+    text:"#1a1a1a", muted:"#888880", ac:"#c07010", acText:"#ffffff",
+    ok:"#2e8a55", err:"#cc3333", logBg:"#e8e8e4",
+    starOff:"#c0c0bc", starOn:"#c07010"
+  },
+  cyan: {
+    bg:"#0d1a1f", surf:"#122028", surf2:"#0f1c24", bord:"#1a3040", bordHi:"#264555",
+    text:"#cdf0f8", muted:"#4a8a9a", ac:"#00c8e0", acText:"#000000",
+    ok:"#4caf7d", err:"#e05454", logBg:"#081318",
+    starOff:"#264555", starOn:"#f0c020"
+  },
+  rose: {
+    bg:"#1a0f14", surf:"#271520", surf2:"#22121c", bord:"#3d1e2d", bordHi:"#542a3d",
+    text:"#f5dde8", muted:"#8a5570", ac:"#f06090", acText:"#000000",
+    ok:"#4caf7d", err:"#e05454", logBg:"#140a10",
+    starOff:"#542a3d", starOn:"#f0c020"
+  },
+  slate: {
+    bg:"#111418", surf:"#191e24", surf2:"#151a20", bord:"#252d38", bordHi:"#344050",
+    text:"#d8e0ea", muted:"#546070", ac:"#7aa8d0", acText:"#000000",
+    ok:"#4caf7d", err:"#e05454", logBg:"#0c1014",
+    starOff:"#344050", starOn:"#f0c020"
+  },
+  sand: {
+    bg:"#1a1710", surf:"#242018", surf2:"#201d14", bord:"#38321e", bordHi:"#4e452a",
+    text:"#f0e8d0", muted:"#80704a", ac:"#d4a840", acText:"#000000",
+    ok:"#4caf7d", err:"#e05454", logBg:"#12100a",
+    starOff:"#4e452a", starOn:"#d4a840"
+  },
+  mint: {
+    bg:"#0f1a18", surf:"#152420", surf2:"#12201c", bord:"#1e3530", bordHi:"#2a4840",
+    text:"#d0f0e8", muted:"#467a6e", ac:"#30d4a8", acText:"#000000",
+    ok:"#4caf7d", err:"#e05454", logBg:"#0a1412",
+    starOff:"#2a4840", starOn:"#f0c020"
+  },
+  midnight: {
+    bg:"#05070a", surf:"#0c1018", surf2:"#090d14", bord:"#141c28", bordHi:"#1e2c3f",
+    text:"#b8c8e0", muted:"#3a5070", ac:"#5080c0", acText:"#ffffff",
+    ok:"#4caf7d", err:"#e05454", logBg:"#030508",
+    starOff:"#1e2c3f", starOn:"#f0c020"
+  },
+  paper: {
+    bg:"#efe9dd", surf:"#fbf7ee", surf2:"#f4eee2", bord:"#d8cfba", bordHi:"#bcaf94",
+    text:"#3a3326", muted:"#9a8f78", ac:"#b5651d", acText:"#ffffff",
+    ok:"#3a8f5a", err:"#c0392b", logBg:"#e6ddca",
+    starOff:"#cfc4ab", starOn:"#b5651d"
+  },
+  sky: {
+    bg:"#eef3f8", surf:"#ffffff", surf2:"#eaf1f8", bord:"#cfdcea", bordHi:"#a9c2db",
+    text:"#1c2a38", muted:"#7d92a6", ac:"#1e7ac0", acText:"#ffffff",
+    ok:"#1f9d6b", err:"#cc3b3b", logBg:"#e3ecf5",
+    starOff:"#c4d4e4", starOn:"#1e7ac0"
+  },
+  sage: {
+    bg:"#eef1ea", surf:"#fbfcf9", surf2:"#e9eee2", bord:"#d2dac6", bordHi:"#b2bfa0",
+    text:"#26302a", muted:"#869180", ac:"#4f8a3d", acText:"#ffffff",
+    ok:"#3a8f5a", err:"#c0392b", logBg:"#e3e8da",
+    starOff:"#cad3bd", starOn:"#4f8a3d"
+  },
+  hcdark: {
+    bg:"#000000", surf:"#000000", surf2:"#0a0a0a", bord:"#666666", bordHi:"#aaaaaa",
+    text:"#ffffff", muted:"#c8c8c8", ac:"#ffff00", acText:"#000000",
+    ok:"#00ff88", err:"#ff5050", logBg:"#000000",
+    starOff:"#888888", starOn:"#ffff00"
+  },
+  hclight: {
+    bg:"#ffffff", surf:"#ffffff", surf2:"#f2f2f2", bord:"#000000", bordHi:"#000000",
+    text:"#000000", muted:"#333333", ac:"#0000cc", acText:"#ffffff",
+    ok:"#006622", err:"#cc0000", logBg:"#f2f2f2",
+    starOff:"#555555", starOn:"#0000cc"
+  },
+  hcamber: {
+    bg:"#000000", surf:"#080600", surf2:"#100c00", bord:"#705500", bordHi:"#b88a00",
+    text:"#ffcc33", muted:"#b88a00", ac:"#ffb000", acText:"#000000",
+    ok:"#88ff00", err:"#ff5050", logBg:"#000000",
+    starOff:"#705500", starOn:"#ffb000"
+  }
+};
+
+function applyTheme(name) {
+  var t = THEMES[name] || THEMES.amber;
+  currentTheme = name;
+
+  function s(id, prop, val) {
+    var el = document.getElementById(id);
+    if (el) el.style[prop] = val;
+  }
+  function sc(sel, prop, val) {
+    // apply to all matching by className — IE compatible loop
+    var all = document.getElementsByTagName("*");
+    for (var i=0; i<all.length; i++) {
+      if ((" "+all[i].className+" ").indexOf(" "+sel+" ")>=0)
+        all[i].style[prop] = val;
+    }
+  }
+
+  // Body
+  document.body.style.background = t.bg;
+  document.body.style.color = t.text;
+
+  // Header
+  s("header","background",t.surf);
+  s("header","borderBottomColor",t.bord);
+  s("title-ff","color",t.ac);
+  s("title-batch","color",t.muted);
+  styleBtn("btn-editpresets", t);
+  styleBtn("btn-settings", t);
+
+  // Sidebar
+  s("sidebar","background",t.surf2);
+  s("sidebar","borderRightColor",t.bord);
+  s("sidebar-top","borderBottomColor",t.bord);
+  s("search-box","background",t.bg);
+  s("search-box","borderColor",t.bord);
+  s("search-box","color",t.text);
+  s("fav-filter","color", showFavsOnly ? t.ac : t.muted);
+  s("compat-filter","color", compatOnly ? t.ac : t.muted);
+  s("sidebar-footer","borderTopColor",t.bord);
+  s("sidebar-footer","background",t.surf2);
+  styleBtn("btn-reload", t);
+
+  // Group headers
+  sc("group-header","background",t.surf2);
+  sc("group-header","color",t.muted);
+
+  // Dropzone
+  s("dropzone","borderColor",t.bordHi);
+  s("dropzone","background",t.surf2);
+  s("dz-sub","color",t.muted);
+  styleBtn("dz-browse", t);
+
+  // Output row
+  s("out-label","color",t.muted);
+  s("out-path","background",t.surf);
+  s("out-path","borderColor",t.bord);
+  s("out-path","color",t.muted);
+  styleBtn("btn-pickout", t);
+  styleBtn("btn-resetout", t);
+
+  // Queue empty
+  s("empty-text","color",t.muted);
+
+  // Toolbar
+  s("toolbar","borderTopColor",t.bord);
+  s("toolbar","background",t.surf2);
+  s("tally","color",t.muted);
+  styleBtn("btn-clear", t);
+  s("btn-stop","borderColor",t.err);
+  s("btn-stop","color",t.err);
+  s("btn-run","background",t.ac);
+  s("btn-run","borderColor",t.ac);
+  s("btn-run","color",t.acText);
+
+  // Settings panel
+  s("settings-panel","background",t.surf);
+  s("settings-panel","borderColor",t.bord);
+  s("settings-title","color",t.muted);
+  s("settings-scale-title","color",t.muted);
+  s("settings-sep","borderTopColor",t.bord);
+  s("settings-sep2","borderTopColor",t.bord);
+  s("ui-scale-label","color",t.muted);
+  // re-apply scale button active state
+  var scaleIds=[1,1.5,2];
+  for(var sci=0;sci<scaleIds.length;sci++){
+    var sbtn=document.getElementById("scale-"+scaleIds[sci]+"x");
+    if(!sbtn)continue;
+    sbtn.style.borderColor=(scaleIds[sci]===currentScale)?t.ac:t.bord;
+    sbtn.style.color=(scaleIds[sci]===currentScale)?t.ac:t.muted;
+    sbtn.style.fontWeight=(scaleIds[sci]===currentScale)?"900":"700";
+  }
+  styleSettingsBtn("sp-editbtn", t);
+  styleSettingsBtn("sp-reloadbtn", t);
+
+  // Swatches — highlight active
+  var swIds = ["sw-amber","sw-blue","sw-green","sw-purple","sw-red","sw-light","sw-cyan","sw-rose","sw-slate","sw-sand","sw-mint","sw-midnight","sw-paper","sw-sky","sw-sage","sw-hcdark","sw-hclight","sw-hcamber"];
+  var swColors = {
+    "sw-amber":    {bg:"#1e1e1e", color:"#e8a020"},
+    "sw-blue":     {bg:"#162030", color:"#4a9eff"},
+    "sw-green":    {bg:"#162218", color:"#4caf7d"},
+    "sw-purple":   {bg:"#1c1729", color:"#a374f7"},
+    "sw-red":      {bg:"#251515", color:"#e05454"},
+    "sw-light":    {bg:"#ffffff", color:"#c07010"},
+    "sw-cyan":     {bg:"#122028", color:"#00c8e0"},
+    "sw-rose":     {bg:"#271520", color:"#f06090"},
+    "sw-slate":    {bg:"#191e24", color:"#7aa8d0"},
+    "sw-sand":     {bg:"#242018", color:"#d4a840"},
+    "sw-mint":     {bg:"#152420", color:"#30d4a8"},
+    "sw-midnight": {bg:"#0c1018", color:"#5080c0"},
+    "sw-paper":    {bg:"#fbf7ee", color:"#b5651d"},
+    "sw-sky":      {bg:"#ffffff", color:"#1e7ac0"},
+    "sw-sage":     {bg:"#fbfcf9", color:"#4f8a3d"},
+    "sw-hcdark":   {bg:"#000000", color:"#ffff00"},
+    "sw-hclight":  {bg:"#ffffff", color:"#0000cc"},
+    "sw-hcamber":  {bg:"#000000", color:"#ffb000"}
+  };
+  for (var si=0; si<swIds.length; si++) {
+    var swEl = document.getElementById(swIds[si]);
+    if (!swEl) continue;
+    swEl.style.background   = swColors[swIds[si]].bg;
+    swEl.style.color        = swColors[swIds[si]].color;
+    swEl.style.borderColor  = (swIds[si] === "sw-"+name) ? t.ac : "#333333";
+    swEl.style.borderWidth  = (swIds[si] === "sw-"+name) ? "2px" : "1px";
+  }
+
+  // Re-render preset list and jobs so their inline styles update
+  renderPresets();
+  renderJobs();
+  saveSettings();
+}
+
+function styleBtn(id, t) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.style.borderColor = t.bord;
+  el.style.color = t.muted;
+}
+function styleSettingsBtn(id, t) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.style.borderColor = t.bord;
+  el.style.color = t.muted;
+  el.style.background = "none";
+}
+
+function getT() { return THEMES[currentTheme] || THEMES.amber; }
+
+var BASE_W = 980, BASE_H = 700;
+function applyScale(n) {
+  if (n !== 1.5 && n !== 2) n = 1;   // 1x, 1.5x and 2x supported
+  currentScale = n;
+  // Zoom the fixed-size root box (980x700) and grow the window to match,
+  // so the layout is identical, just larger. Because #app-root has an
+  // explicit size (not a viewport fill), zoom scales it cleanly to
+  // 980n x 700n with no double-counting.
+  var root = document.getElementById("app-root");
+  if (root) root.style.zoom = n;
+  try {
+    // resizeTo sets the OUTER window size; add the chrome (title bar +
+    // borders) so the client area is ~BASE_W*n x BASE_H*n.
+    var CHROME_W = 16, CHROME_H = 39;
+    var w = BASE_W * n + CHROME_W, h = BASE_H * n + CHROME_H;
+    if (w > screen.availWidth)  w = screen.availWidth;
+    if (h > screen.availHeight) h = screen.availHeight;
+    window.resizeTo(w, h);
+    var x = Math.max(0, Math.floor((screen.width  - w) / 2));
+    var y = Math.max(0, Math.floor((screen.height - h) / 2));
+    window.moveTo(x, y);
+  } catch(_) {}
+  // update button styles
+  var t = getT();
+  var ids = [1,1.5,2];
+  for (var i=0; i<ids.length; i++) {
+    var btn = document.getElementById("scale-"+ids[i]+"x");
+    if (!btn) continue;
+    btn.style.borderColor = (ids[i]===n) ? t.ac : t.bord;
+    btn.style.color       = (ids[i]===n) ? t.ac : t.muted;
+    btn.style.fontWeight  = (ids[i]===n) ? "900" : "700";
+  }
+  saveSettings();
+}
+
+// ── Settings panel toggle ───────────────────────────────
+function toggleSettings() {
+  var p = document.getElementById("settings-panel");
+  if (p.className.indexOf("open") >= 0) {
+    p.className = "";
+  } else {
+    p.className = "open";
+  }
+}
+document.onclick = function(e) {
+  var t = e ? e.srcElement : window.event.srcElement;
+  var panel = document.getElementById("settings-panel");
+  var btn   = document.getElementById("btn-settings");
+  if (!panel || panel.className.indexOf("open") < 0) return;
+  var el = t;
+  while (el) {
+    if (el === panel || el === btn) return;
+    el = el.parentElement;
+  }
+  panel.className = "";
+};
+
+// ── Boot ───────────────────────────────────────────────
+window.onload = function() {
+  window.moveTo((screen.width-980)/2, (screen.height-700)/2);
+  loadSettings();   // applies saved scale, which sizes the window
+  loadPresets();
+};
+
+function appFolder() {
+  var cl = window.location.href;
+  cl = cl.replace(/^file:\/\/\//, "").replace(/\//g, "\\");
+  cl = decodeURIComponent(cl);
+  return fso.GetParentFolderName(cl);
+}
+function settingsPath() { return appFolder() + "\\settings.json"; }
+
+// ── Persistence ─────────────────────────────────────────
+// Read a UTF-8/ASCII text file from local disk.
+//
+// Previously the presets/settings/custom-template files were read with
+// Microsoft.XMLHTTP over file:// URLs. That works on a local copy, but a copy
+// downloaded from the internet carries the "Mark of the Web", which makes mshta
+// run the HTA in the Internet security zone -- and from that zone a file:// read
+// is a blocked cross-zone access, so it fails with "Permission denied" unless
+// the user manually unblocks the files (right-click > Properties > Unblock).
+//
+// ADODB.Stream reads the bytes straight off disk (no URL, no zone check), so it
+// keeps working on downloaded copies. We try it first, then fall back to the
+// original XMLHTTP read (so anything that worked before still works), then to
+// the FileSystemObject as a last resort. The helper throws only if all three
+// fail, so each caller's existing try/catch behaves exactly as before.
+function readTextFile(path) {
+  var lastErr = null;
+  // 1) ADODB.Stream as UTF-8 -- unaffected by the Mark-of-the-Web zone block.
+  try {
+    var st = new ActiveXObject("ADODB.Stream");
+    st.Type = 2;              // adTypeText
+    st.Charset = "utf-8";
+    st.Open();
+    st.LoadFromFile(path);
+    var t1 = st.ReadText(-1); // adReadAll
+    st.Close();
+    return t1;
+  } catch(e1) { lastErr = e1; }
+  // 2) Original Microsoft.XMLHTTP read (unchanged behaviour, also UTF-8).
+  try {
+    var xhr = new ActiveXObject("Microsoft.XMLHTTP");
+    xhr.open("GET", "file:///" + path.replace(/\\/g, "/"), false);
+    xhr.send();
+    return xhr.responseText;
+  } catch(e2) { lastErr = e2; }
+  // 3) Last resort: FileSystemObject (system ANSI). Fine for the ASCII files;
+  //    presets.json's non-ASCII glyphs would only be affected here, and only if
+  //    both methods above were unavailable.
+  try {
+    var f = fso.OpenTextFile(path, 1, false);
+    var t3 = f.AtEndOfStream ? "" : f.ReadAll();
+    f.Close();
+    return t3;
+  } catch(e3) { lastErr = e3; }
+  throw lastErr;
+}
+
+function loadSettings() {
+  try {
+    var p = settingsPath();
+    if (!fso.FileExists(p)) { applyTheme("amber"); applyScale(1); return; }
+    var raw = readTextFile(p).replace(/^\uFEFF/,"");
+    var s = (new Function("return " + raw))();
+    if (s.favourites) favourites = s.favourites;
+    if (s.scale) currentScale = s.scale;
+    applyTheme(s.theme || "amber");
+    applyScale(currentScale);
+  } catch(e) { applyTheme("amber"); applyScale(1); }
+}
+
+function saveSettings() {
+  try {
+    var fkeys = [];
+    for (var k in favourites) { if (favourites[k]) fkeys.push('"'+k+'":true'); }
+    var json = '{"theme":"'+currentTheme+'","scale":'+currentScale+',"favourites":{'+fkeys.join(",")+'}}';
+    var f = fso.CreateTextFile(settingsPath(), true, false);
+    f.Write(json); f.Close();
+  } catch(e) {}
+}
+
+// ── Presets ─────────────────────────────────────────────
+// ── Preset compatibility ────────────────────────────────
+// Derive which input extensions a preset is meant for. Audio/Special/Custom
+// presets are universal (work on any input); format-named groups map to that
+// input extension.
+function presetInputExts(p) {
+  if (p.inputExts && p.inputExts.length) return p.inputExts;
+  var g = ("" + (p.group || "")).toLowerCase();
+  if (g === "audio" || g === "special" || g === "custom" || g === "other" || g === "") return ["*"];
+  return [g];
+}
+function presetMatchesInputs(p, extSet) {
+  var ie = presetInputExts(p);
+  for (var i = 0; i < ie.length; i++) {
+    if (ie[i] === "*") return true;
+    if (extSet[ie[i]]) return true;
+  }
+  return false;
+}
+function queueInputExtSet() {
+  var set = {}, any = false;
+  for (var i = 0; i < jobs.length; i++) {
+    if (jobs[i].isSequence) { set[jobs[i].ext || "png"] = 1; any = true; continue; }
+    var nm = jobs[i].filename || "";
+    var dot = nm.lastIndexOf(".");
+    if (dot >= 0) { set[nm.substring(dot + 1).toLowerCase()] = 1; any = true; }
+  }
+  set.__any = any;
+  return set;
+}
+
+// ── ffmpeg args <-> editable fields ─────────────────────
+// Parse a preset's args string into the basic fields the editor exposes.
+function parseArgs(args) {
+  args = args || "";
+  var f = { crf: "", speed: "", scale: "", abr: "", vcodec: "", acodec: "", extra: "" };
+  var consumed = {};
+  var m;
+  if ((m = args.match(/-crf\s+(\d+)/)))            { f.crf = m[1];   consumed[m[0]] = 1; }
+  if ((m = args.match(/-preset\s+(\w+)/)))         { f.speed = m[1]; consumed[m[0]] = 1; }
+  if ((m = args.match(/-vf\s+scale=([\d\-]+:[\d\-]+)/))) { f.scale = m[1]; consumed[m[0]] = 1; }
+  if ((m = args.match(/-b:a\s+(\w+)/)))            { f.abr = m[1];   consumed[m[0]] = 1; }
+  if ((m = args.match(/-c:v\s+([\w\-]+)/)))            { f.vcodec = m[1];consumed[m[0]] = 1; }
+  if ((m = args.match(/-c:a\s+([\w\-]+)/)))            { f.acodec = m[1];consumed[m[0]] = 1; }
+  // whatever is left becomes the "extra args" field
+  var extra = args;
+  for (var k in consumed) { extra = extra.split(k).join(" "); }
+  f.extra = extra.replace(/\s+/g, " ").replace(/^\s+|\s+$/g, "");
+  return f;
+}
+// Build an args string back from the editable fields.
+function buildArgs(f) {
+  var parts = [];
+  if (f.vcodec) parts.push("-c:v " + f.vcodec);
+  if (f.speed)  parts.push("-preset " + f.speed);
+  if (f.crf !== "" && f.crf != null) parts.push("-crf " + f.crf);
+  if (f.acodec) parts.push("-c:a " + f.acodec);
+  if (f.abr)    parts.push("-b:a " + f.abr);
+  if (f.scale)  parts.push("-vf scale=" + f.scale);
+  if (f.extra)  parts.push(f.extra);
+  return parts.join(" ").replace(/\s+/g, " ").replace(/^\s+|\s+$/g, "");
+}
+
+// ── Custom presets persistence ──────────────────────────
+function customPath() { return appFolder() + "\\custom_presets.json"; }
+function loadCustomPresets() {
+  customPresets = [];
+  try {
+    var p = customPath();
+    if (!fso.FileExists(p)) return;
+    var raw = readTextFile(p).replace(/^\uFEFF/, "");
+    if (!raw.replace(/\s/g, "")) return;
+    var arr = (new Function("return " + raw))();
+    if (arr && arr.length) {
+      for (var i = 0; i < arr.length; i++) { arr[i].group = "Custom"; customPresets.push(arr[i]); }
+    }
+  } catch(e) {}
+}
+function saveCustomPresets() {
+  try {
+    var items = [];
+    for (var i = 0; i < customPresets.length; i++) {
+      var c = customPresets[i];
+      var ie = c.inputExts && c.inputExts.length ? '["' + c.inputExts.join('","') + '"]' : '["*"]';
+      items.push('{"id":' + jsonStr(c.id) + ',"name":' + jsonStr(c.name)
+        + ',"group":"Custom","description":' + jsonStr(c.description)
+        + ',"outputExt":' + jsonStr(c.outputExt) + ',"inputExts":' + ie
+        + ',"inputArgs":' + jsonStr(c.inputArgs || "")
+        + (c.flatten ? (',"flatten":' + jsonStr(c.flatten)) : "")
+        + ',"args":' + jsonStr(c.args) + '}');
+    }
+    var json = items.length ? "[\n  " + items.join(",\n  ") + "\n]" : "[]";
+    var f = fso.CreateTextFile(customPath(), true, false);
+    f.Write(json); f.Close();
+  } catch(e) { alert("Could not save custom templates:\n" + e.message); }
+}
+function jsonStr(s) {
+  s = "" + (s == null ? "" : s);
+  s = s.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\r/g, "").replace(/\n/g, " ");
+  // Escape every non-ASCII char (→ × ° accents …) and any stray control char as
+  // \uXXXX. custom_presets.json is written through an ANSI TextStream, which
+  // throws "Invalid procedure call or argument" the moment it's handed a
+  // character with no ANSI mapping (the → in every built-in preset name is the
+  // usual culprit). Keeping the file pure ASCII sidesteps that entirely, and the
+  // loader's eval restores the original characters on read.
+  s = s.replace(/[\u0000-\u001f\u0080-\uffff]/g, function (ch) {
+    return "\\u" + ("0000" + ch.charCodeAt(0).toString(16)).slice(-4);
+  });
+  return '"' + s + '"';
+}
+function allPresets() {
+  var all = [];
+  for (var i = 0; i < presets.length; i++) all.push(presets[i]);
+  for (var j = 0; j < customPresets.length; j++) all.push(customPresets[j]);
+  return all;
+}
+function findPreset(id) {
+  var all = allPresets();
+  for (var i = 0; i < all.length; i++) if (all[i].id === id) return all[i];
+  return null;
+}
+function newId() {
+  return "custom-" + (new Date()).getTime() + "-" + Math.floor(Math.random() * 1000);
+}
+
+function loadPresets() {
+  var path = appFolder() + "\\presets.json";
+  try {
+    var raw = readTextFile(path).replace(/^\uFEFF/,"").replace(/\/\/[^\n]*/g,"");
+    presets = (new Function("return " + raw))();
+  } catch(e) {
+    presets = [];
+    alert("Could not load presets.json:\n" + e.message + "\n\nPath: " + path);
+  }
+  loadCustomPresets();
+  renderPresets();
+  if (!selectedPreset) {
+    var all = allPresets();
+    if (all.length) selectPreset(all[0]);
+  }
+}
+
+function reloadPresets() {
+  var panel = document.getElementById("settings-panel");
+  panel.className = "";
+  loadPresets();
+}
+function editPresets() { wsh.Run('notepad.exe "' + appFolder() + '\\presets.json"'); }
+
+function filterPresets() {
+  searchTerm = document.getElementById("search-box").value.toLowerCase();
+  renderPresets();
+}
+function toggleFavFilter() {
+  showFavsOnly = !showFavsOnly;
+  var t = getT();
+  document.getElementById("fav-filter").style.color = showFavsOnly ? t.ac : t.muted;
+  renderPresets();
+}
+function toggleFav(id) {
+  favourites[id] = !favourites[id];
+  saveSettings(); renderPresets();
+}
+
+function renderPresets() {
+  var t = getT();
+  var extSet = queueInputExtSet();
+  var doCompat = compatOnly && extSet.__any;   // only filter when we have files
+  var src = allPresets();
+  var groups = {}; var order = [];
+  for (var i = 0; i < src.length; i++) {
+    var p = src[i];
+    if (searchTerm && p.name.toLowerCase().indexOf(searchTerm) < 0
+        && (""+(p.description||"")).toLowerCase().indexOf(searchTerm) < 0
+        && (""+(p.group||"")).toLowerCase().indexOf(searchTerm) < 0) continue;
+    if (showFavsOnly && !favourites[p.id]) continue;
+    if (doCompat && p.group !== "Custom" && !presetMatchesInputs(p, extSet)) continue;
+    var g = p.group || "Other";
+    if (!groups[g]) { groups[g] = []; order.push(g); }
+    groups[g].push(p);
+  }
+  // Always show the Custom group last, even when empty, so the "+ new" button
+  // is reachable.
+  if (order.indexOf("Custom") < 0) order.push("Custom");
+  if (!groups["Custom"]) groups["Custom"] = [];
+
+  var html = "";
+  for (var gi = 0; gi < order.length; gi++) {
+    var gname = order[gi];
+    var gp = groups[gname];
+    // skip empty non-custom groups produced by filtering
+    if (gname !== "Custom" && (!gp || !gp.length)) continue;
+    html += '<div class="group-header" style="background:'+t.surf2+';color:'+t.muted+'">'+esc(gname)+'</div>';
+    for (var pi = 0; pi < gp.length; pi++) {
+      var p = gp[pi];
+      var isActive = selectedPreset && selectedPreset.id === p.id;
+      var isFav    = !!favourites[p.id];
+      var isCustom = (p.group === "Custom");
+      var itemBg   = isActive ? t.surf : "transparent";
+      var leftBord = isActive ? t.ac : "transparent";
+      var nameCol  = isActive ? t.ac : t.text;
+      // Match badge: shown when probe data suggests this preset fits the queued files
+      var matchBadge = "";
+      if (probeMatchScores[p.id]) {
+        matchBadge = '<span class="preset-match" style="background:'+t.ac+';color:'+t.acText+'">match</span>';
+      }
+      html += '<div class="preset-item" onclick="selectPresetById(\''+p.id+'\')" style="background:'+itemBg+';border-left-color:'+leftBord+'">'
+            + '<div class="pi-left">'
+            + '<div class="preset-name" style="color:'+nameCol+'">'+esc(p.name)+matchBadge+'</div>'
+            + '<div class="preset-desc" style="color:'+t.muted+'">'+esc(p.description)+'</div>'
+            + '</div>'
+            + '<div class="pi-right">'
+            + '<button class="row-btn" title="Edit / duplicate" onclick="event.cancelBubble=true;openEditor(\''+p.id+'\')" style="color:'+t.muted+'">&#9998;</button>'
+            + (isCustom
+                ? '<button class="row-btn" title="Delete template" onclick="event.cancelBubble=true;deleteCustom(\''+p.id+'\')" style="color:'+t.err+'">&times;</button>'
+                : '')
+            + '<button class="star-btn" title="'+(isFav?"Remove from":"Add to")+' favourites" onclick="event.cancelBubble=true;toggleFav(\''+p.id+'\')" style="color:'+(isFav?t.starOn:t.starOff)+'">'
+            + (isFav?"&#9733;":"&#9734;")
+            + '</button>'
+            + '</div>'
+            + '</div>';
+    }
+    if (gname === "Custom") {
+      html += '<div class="new-tpl-row"><button id="btn-newtpl" onclick="openEditor(null)" style="border-color:'+t.bord+';color:'+t.ac+';background:'+t.surf2+'">+ New custom template</button></div>';
+    }
+  }
+  if (!html) html = '<div style="padding:16px;font-size:11px;color:'+t.muted+';text-align:center;">No presets match</div>';
+  document.getElementById("preset-list").innerHTML = html;
+}
+
+function selectPresetById(id) {
+  var p = findPreset(id);
+  if (p) selectPreset(p);
+}
+
+function deleteCustom(id) {
+  for (var i = 0; i < customPresets.length; i++) {
+    if (customPresets[i].id === id) {
+      customPresets.splice(i, 1);
+      saveCustomPresets();
+      if (selectedPreset && selectedPreset.id === id) {
+        var all = allPresets();
+        selectedPreset = all.length ? all[0] : null;
+      }
+      renderPresets(); updateRunButton();
+      return;
+    }
+  }
+}
+
+function toggleCompatFilter() {
+  compatOnly = !compatOnly;
+  var t = getT();
+  var el = document.getElementById("compat-filter");
+  if (el) el.style.color = compatOnly ? t.ac : t.muted;
+  renderPresets();
+}
+
+// ── Template editor ─────────────────────────────────────
+function openEditor(id) {
+  var t = getT();
+  editingId = id;            // null = brand-new from scratch
+  var base = id ? findPreset(id) : null;
+  var f = parseArgs(base ? base.args : "-c:v libx264 -preset medium -crf 20 -c:a aac -b:a 128k");
+  var name = base ? (base.name + " (copy)") : "My custom template";
+  var outExt = base ? (base.outputExt || "mp4") : "mp4";
+  var inExts = base ? presetInputExts(base) : ["*"];
+  var inSel = (inExts.length === 1 && inExts[0] === "*") ? "*" : inExts[0];
+  var inArgs = base && base.inputArgs ? base.inputArgs : "";
+  // FPS is exposed as its own field. Pull any "-r N" out of the input args so
+  // it prefills the FPS box; the remainder stays in the input-args field.
+  var fps = "";
+  var fpsM = inArgs.match(/(^|\s)-r\s+([\d.]+)/);
+  if (fpsM) { fps = fpsM[2]; inArgs = inArgs.replace(fpsM[0], " ").replace(/\s+/g, " ").replace(/^\s+|\s+$/g, ""); }
+
+  function opt(v, label, sel) { return '<option value="'+v+'"'+(sel===v?' selected':'')+'>'+label+'</option>'; }
+
+  var inputOpts = opt("*","Any format", inSel) + opt("mp4","MP4", inSel) + opt("mov","MOV", inSel)
+    + opt("mkv","MKV", inSel) + opt("avi","AVI", inSel) + opt("wmv","WMV", inSel) + opt("mxf","MXF", inSel)
+    + opt("webm","WEBM", inSel) + opt("flv","FLV", inSel);
+  var outOpts = opt("mp4","MP4", outExt) + opt("mov","MOV", outExt) + opt("mkv","MKV", outExt)
+    + opt("avi","AVI", outExt) + opt("wmv","WMV", outExt) + opt("webm","WEBM", outExt)
+    + opt("gif","GIF", outExt) + opt("mp3","MP3 (audio)", outExt) + opt("m4a","M4A (audio)", outExt);
+  var vcOpts = opt("","(auto/keep)", f.vcodec) + opt("libx264","H.264 (libx264)", f.vcodec)
+    + opt("libx265","H.265 (libx265)", f.vcodec) + opt("msmpeg4","WMV2 (msmpeg4)", f.vcodec)
+    + opt("prores_ks","ProRes", f.vcodec) + opt("libvpx-vp9","VP9 (for WebM)", f.vcodec)
+    + opt("libvpx","VP8 (for WebM)", f.vcodec);
+  var spOpts = opt("","(none)", f.speed) + opt("ultrafast","ultrafast", f.speed) + opt("veryfast","veryfast", f.speed)
+    + opt("fast","fast", f.speed) + opt("medium","medium", f.speed) + opt("slow","slow", f.speed)
+    + opt("veryslow","veryslow", f.speed);
+  var acOpts = opt("","(auto/keep)", f.acodec) + opt("aac","AAC", f.acodec) + opt("libmp3lame","MP3", f.acodec)
+    + opt("libopus","Opus (for WebM)", f.acodec) + opt("libvorbis","Vorbis (for WebM/OGG)", f.acodec)
+    + opt("flac","FLAC (lossless)", f.acodec) + opt("wmav2","WMA", f.acodec)
+    + opt("pcm_s16le","PCM 16-bit", f.acodec) + opt("copy","copy (no re-encode)", f.acodec);
+
+  var html = ''
+    + '<div>'
+    + '<div id="editor-title" style="color:'+t.ac+'">'+(id?"Edit / duplicate template":"New custom template")+'</div>'
+    + '<div class="ed-row"><label style="color:'+t.muted+'">Template name</label>'
+    + '<input type="text" id="ed-name" value="'+esc(name)+'" style="background:'+t.surf2+';border-color:'+t.bord+';color:'+t.text+'" /></div>'
+    + '<div class="ed-cols">'
+    + '<div class="ed-col"><label style="color:'+t.muted+'">Applies to input</label>'
+    + '<select id="ed-input" style="background:'+t.surf2+';border-color:'+t.bord+';color:'+t.text+'">'+inputOpts+'</select></div>'
+    + '<div class="ed-col"><label style="color:'+t.muted+'">Output format</label>'
+    + '<select id="ed-output" style="background:'+t.surf2+';border-color:'+t.bord+';color:'+t.text+'">'+outOpts+'</select></div>'
+    + '</div>'
+    + '<div class="ed-cols">'
+    + '<div class="ed-col"><label style="color:'+t.muted+'">Video codec</label>'
+    + '<select id="ed-vcodec" style="background:'+t.surf2+';border-color:'+t.bord+';color:'+t.text+'">'+vcOpts+'</select></div>'
+    + '<div class="ed-col"><label style="color:'+t.muted+'">Encode speed</label>'
+    + '<select id="ed-speed" style="background:'+t.surf2+';border-color:'+t.bord+';color:'+t.text+'">'+spOpts+'</select></div>'
+    + '</div>'
+    + '<div class="ed-cols">'
+    + '<div class="ed-col"><label style="color:'+t.muted+'">Resolution (WxH, blank = keep)</label>'
+    + '<input type="text" id="ed-scale" value="'+esc(f.scale.replace(":","x"))+'" placeholder="1920x1080" style="background:'+t.surf2+';border-color:'+t.bord+';color:'+t.text+'" /></div>'
+    + '<div class="ed-col"><label style="color:'+t.muted+'">Compression / CRF (0-51, lower = better)</label>'
+    + '<input type="text" id="ed-crf" value="'+esc(f.crf)+'" placeholder="20" style="background:'+t.surf2+';border-color:'+t.bord+';color:'+t.text+'" /></div>'
+    + '</div>'
+    + '<div class="ed-cols">'
+    + '<div class="ed-col"><label style="color:'+t.muted+'">Frame rate / FPS (blank = keep)</label>'
+    + '<input type="text" id="ed-fps" value="'+esc(fps)+'" placeholder="30" style="background:'+t.surf2+';border-color:'+t.bord+';color:'+t.text+'" /></div>'
+    + '<div class="ed-col">&nbsp;</div>'
+    + '</div>'
+    + '<div class="ed-cols">'
+    + '<div class="ed-col"><label style="color:'+t.muted+'">Audio codec</label>'
+    + '<select id="ed-acodec" style="background:'+t.surf2+';border-color:'+t.bord+';color:'+t.text+'">'+acOpts+'</select></div>'
+    + '<div class="ed-col"><label style="color:'+t.muted+'">Audio bitrate (blank = keep)</label>'
+    + '<input type="text" id="ed-abr" value="'+esc(f.abr)+'" placeholder="128k" style="background:'+t.surf2+';border-color:'+t.bord+';color:'+t.text+'" /></div>'
+    + '</div>'
+    + '<div class="ed-row"><label style="color:'+t.muted+'">Extra ffmpeg args (advanced, optional)</label>'
+    + '<input type="text" id="ed-extra" value="'+esc(f.extra)+'" style="background:'+t.surf2+';border-color:'+t.bord+';color:'+t.text+';font-family:Consolas,monospace" /></div>'
+    + '<div class="ed-row"><label style="color:'+t.muted+'">Input args, placed before -i (advanced, e.g. image sequences)</label>'
+    + '<input type="text" id="ed-inargs" value="'+esc(inArgs)+'" style="background:'+t.surf2+';border-color:'+t.bord+';color:'+t.text+';font-family:Consolas,monospace" /></div>'
+    + '</div>';
+
+  var ov = document.getElementById("editor-overlay");
+  var fields = document.getElementById("editor-fields");
+  var box    = document.getElementById("editor-box");
+  if (fields) fields.innerHTML = html;
+  // Style the static elements with current theme
+  if (box) { box.style.background = t.surf; box.style.borderColor = t.bordHi; box.style.color = t.text; }
+  var btnSave   = document.getElementById("ed-save");
+  var btnCancel = document.getElementById("ed-cancel");
+  if (btnSave)   { btnSave.style.borderColor = t.ac; btnSave.style.color = t.ac; }
+  if (btnCancel) { btnCancel.style.borderColor = t.bord; btnCancel.style.color = t.muted; }
+  if (ov) ov.style.display = "block";
+}
+
+function closeEditor() {
+  var ov     = document.getElementById("editor-overlay");
+  var fields = document.getElementById("editor-fields");
+  if (ov)     ov.style.display = "none";
+  if (fields) fields.innerHTML = "";
+  editingId = null;
+}
+
+function val(id) { var e = document.getElementById(id); return e ? ("" + e.value).replace(/^\s+|\s+$/g, "") : ""; }
+
+// Warn about codec/container combos ffmpeg will reject. Returns a message
+// string if there's a problem, or "" if the combination is fine.
+function checkContainerCodecs(ext, vcodec, acodec) {
+  ext = ("" + ext).toLowerCase();
+  var allowV = {
+    webm: {libvpx:1, "libvpx-vp9":1, vp8:1, vp9:1, "libaom-av1":1, av1:1},
+    mp4:  {libx264:1, libx265:1, h264:1, hevc:1, mpeg4:1, "":1},
+    mov:  {libx264:1, libx265:1, prores_ks:1, prores:1, dnxhd:1, mpeg4:1, "":1},
+    wmv:  {msmpeg4:1, wmv2:1, "":1},
+    gif:  {gif:1, "":1},
+    mp3:  {"":1}, m4a:{"":1}, flac:{"":1}, wav:{"":1}, ogg:{"":1}, opus:{"":1}
+  };
+  var allowA = {
+    webm: {libopus:1, opus:1, libvorbis:1, vorbis:1, "":1, copy:1},
+    mp4:  {aac:1, libmp3lame:1, mp3:1, ac3:1, "":1, copy:1},
+    mov:  {aac:1, pcm_s16le:1, pcm_s24le:1, "":1, copy:1},
+    wmv:  {wmav2:1, "":1, copy:1},
+    mp3:  {libmp3lame:1, "":1}, m4a:{aac:1, "":1}, flac:{flac:1, "":1},
+    wav:  {pcm_s16le:1, pcm_s24le:1, "":1}, ogg:{libvorbis:1, "":1}, opus:{libopus:1, "":1}
+  };
+  var problems = [];
+  var av = allowV[ext];
+  if (av && vcodec && !av[vcodec] && ext !== "mp3" && ext !== "m4a" && ext !== "flac" && ext !== "wav" && ext !== "ogg" && ext !== "opus") {
+    problems.push("- The " + ext.toUpperCase() + " container does not support the video codec \"" + vcodec + "\".");
+  }
+  var aa = allowA[ext];
+  if (aa && acodec && acodec !== "copy" && !aa[acodec]) {
+    problems.push("- The " + ext.toUpperCase() + " container does not support the audio codec \"" + acodec + "\".");
+  }
+  // Audio-only outputs shouldn't carry a video codec
+  if ((ext === "mp3" || ext === "m4a" || ext === "flac" || ext === "wav" || ext === "ogg" || ext === "opus") && vcodec) {
+    problems.push("- " + ext.toUpperCase() + " is an audio-only format - set Video codec to (auto/keep) or it will fail.");
+  }
+  if (!problems.length) return "";
+  var hint = "";
+  if (ext === "webm") hint = "\n\nFor WebM use video codec VP9 (libvpx-vp9) and audio Opus.";
+  else if (ext === "mp4") hint = "\n\nFor MP4 use H.264/H.265 video and AAC audio.";
+  return "This combination won't work:\n" + problems.join("\n") + hint;
+}
+
+function saveEditor() {
+  var name = val("ed-name");
+  if (!name) { alert("Please enter a template name."); return; }
+  var f = {
+    vcodec: val("ed-vcodec"),
+    speed:  val("ed-speed"),
+    crf:    val("ed-crf"),
+    acodec: val("ed-acodec"),
+    abr:    val("ed-abr"),
+    scale:  val("ed-scale").replace(/x/i, ":").replace(/\s+/g, ""),
+    extra:  val("ed-extra")
+  };
+  var outExt = val("ed-output") || "mp4";
+  var inSel  = val("ed-input") || "*";
+  var inExts = (inSel === "*") ? ["*"] : [inSel];
+
+  // Guard against codec/container combinations ffmpeg will reject outright,
+  // which is the usual reason a custom template "won't start".
+  var warn = checkContainerCodecs(outExt, f.vcodec, f.acodec);
+  if (warn) {
+    if (!confirm(warn + "\n\nSave anyway? (Cancel to go back and fix it)")) return;
+  }
+
+  var args = buildArgs(f);
+  // FPS is stored as an input arg (-r N before -i). Combine it with any
+  // other input args the user typed, without duplicating -r.
+  var fps = val("ed-fps").replace(/\s+/g, "");
+  var inArgs = val("ed-inargs").replace(/(^|\s)-r\s+[\d.]+/g, " ").replace(/\s+/g, " ").replace(/^\s+|\s+$/g, "");
+  if (fps) inArgs = ("-r " + fps + " " + inArgs).replace(/\s+$/g, "");
+  // Build a short human description
+  var descBits = [];
+  if (f.vcodec) descBits.push(f.vcodec);
+  if (f.speed)  descBits.push(f.speed);
+  if (f.crf !== "") descBits.push("CRF " + f.crf);
+  if (f.scale)  descBits.push(f.scale.replace(":", "x"));
+  if (fps)      descBits.push(fps + "fps");
+  if (f.abr)    descBits.push("audio " + f.abr);
+  var desc = descBits.join(", ") || "Custom conversion";
+
+  var tpl = {
+    id: newId(),
+    name: name,
+    group: "Custom",
+    description: desc,
+    outputExt: outExt,
+    inputExts: inExts,
+    inputArgs: inArgs,
+    args: args
+  };
+  // Preserve the transparency-flatten setting from the template being edited.
+  var srcPreset = editingId ? findPreset(editingId) : null;
+  if (srcPreset && srcPreset.flatten) tpl.flatten = srcPreset.flatten;
+  customPresets.push(tpl);
+  saveCustomPresets();
+  closeEditor();
+  selectPreset(tpl);     // auto-select the new template
+  renderPresets();
+}
+
+
+
+function selectPreset(p) {
+  selectedPreset = p; renderPresets(); updateRunButton();
+}
+
+// ── Drop zone ────────────────────────────────────────────
+function dzEnter(e) { return cancelEvt(e); }
+function dzOver(e) {
+  e = e || window.event;
+  cancelEvt(e);
+  try { if (e.dataTransfer) e.dataTransfer.dropEffect = "copy"; } catch(_) {}
+  try {
+    var t=getT();
+    var dz=document.getElementById("dropzone");
+    if (dz) { dz.style.borderColor=t.ac; dz.style.background=t.surf; }
+  } catch(_) {}
+  return false;
+}
+function dzLeave(e) {
+  try {
+    var t=getT();
+    var dz=document.getElementById("dropzone");
+    if (dz) { dz.style.borderColor=t.bordHi; dz.style.background=t.surf2; }
+  } catch(_) {}
+}
+// IE9 standards mode (forced by the X-UA-Compatible meta) uses the W3C
+// drag-drop model: a drop is only ALLOWED if dragover calls preventDefault().
+// The old "returnValue=false" alone does not register a drop target here,
+// which is why the cursor showed "no drop". We call both for safety.
+function cancelEvt(e) {
+  e = e || window.event;
+  if (e.preventDefault) e.preventDefault();
+  e.returnValue = false;
+  return false;
+}
+
+function dzDrop(e) {
+  e = e || window.event;
+  cancelEvt(e);
+  dzLeave(e);
+
+  // Collect unique, existing file paths from every method we can.
+  var found = {}, order = [];
+  function collect(fp) {
+    fp = ("" + fp)
+      .replace(/\u0000/g, "")
+      .replace(/^\s+|\s+$/g, "")
+      .replace(/^"|"$/g, "");
+    if (!fp || fp.indexOf("\\") < 0) return;
+    var key = fp.toLowerCase();
+    if (found[key]) return;
+    try { if (fso.FileExists(fp)) { found[key] = 1; order.push(fp); } } catch(_) {}
+  }
+
+  var dt = e.dataTransfer;
+
+  // First, capture what was ACTUALLY dropped. In IE/HTA the File objects
+  // usually expose .name (and sometimes .path) even when full paths are
+  // blocked. We use the names to filter the shell fallback below so we
+  // never pick up selections from unrelated Explorer windows.
+  var droppedNames = {}, haveNames = false;
+  try {
+    if (dt && dt.files) {
+      for (var fi=0; fi<dt.files.length; fi++) {
+        var fo = dt.files[fi];
+        if (fo.path) collect(fo.path);                 // rarely populated, but free to try
+        if (fo.name) { droppedNames[(""+fo.name).toLowerCase()] = 1; haveNames = true; }
+      }
+    }
+  } catch(_) {}
+
+  // 1) FileNameW — IE's Unicode HDROP format. Multi-file drops are
+  //    separated by null characters.
+  try { var w = dt.getData("FileNameW"); if (w) { var ws = w.split("\u0000"); for (var i=0;i<ws.length;i++) collect(ws[i]); } } catch(_) {}
+  // 2) FileName — ANSI single-file format.
+  try { var a = dt.getData("FileName"); if (a) collect(a); } catch(_) {}
+  // 3) Text — newline-separated paths from some sources.
+  try { var tx = dt.getData("Text"); if (tx) { var ls = tx.replace(/\r/g,"").split("\n"); for (var j=0;j<ls.length;j++) collect(ls[j]); } } catch(_) {}
+
+  // 4) Still no real paths? Enumerate the Explorer selection via a one-shot
+  //    VBScript — but keep ONLY paths whose filename matches what was
+  //    actually dropped, so files selected in other windows are ignored.
+  if (order.length === 0) {
+    var shellPaths = dropViaShell();
+    for (var k=0;k<shellPaths.length;k++) {
+      var sp = shellPaths[k];
+      if (haveNames) {
+        var nm = "";
+        try { nm = ("" + fso.GetFileName(sp)).toLowerCase(); } catch(_) {}
+        if (!droppedNames[nm]) continue;   // not one of the dropped files — skip
+      }
+      collect(sp);
+    }
+  }
+
+  var added = 0;
+  for (var m=0; m<order.length; m++) {
+    if (addInputFile(order[m])) added++;
+  }
+
+  if (added > 0) { renderJobs(); updateRunButton(); renderPresets(); }
+  else { alert("Could not read the dropped file paths.\nPlease use the Browse button instead."); }
+  return false;
+}
+
+// Fallback: list items selected in any open Explorer window (the dragged
+// files) via a tiny VBScript, return their paths.
+function dropViaShell() {
+  var out = [];
+  var tmp = wsh.ExpandEnvironmentStrings("%TEMP%") + "\\ffbatch_drop.txt";
+  var vbs = wsh.ExpandEnvironmentStrings("%TEMP%") + "\\ffbatch_drop.vbs";
+  try {
+    var script =
+      "Dim shl, itm, fso, f, sel, n\r\n" +
+      "Set shl = CreateObject(\"Shell.Application\")\r\n" +
+      "Set fso = CreateObject(\"Scripting.FileSystemObject\")\r\n" +
+      "Set f = fso.CreateTextFile(\"" + tmp + "\", True)\r\n" +
+      "On Error Resume Next\r\n" +
+      "For Each itm In shl.Windows\r\n" +
+      "  Set sel = itm.Document.SelectedItems()\r\n" +
+      "  If Not sel Is Nothing Then\r\n" +
+      "    For n = 0 To sel.Count - 1\r\n" +
+      "      f.WriteLine sel.Item(n).Path\r\n" +
+      "    Next\r\n" +
+      "  End If\r\n" +
+      "Next\r\n" +
+      "f.Close\r\n";
+    var vf = fso.CreateTextFile(vbs, true, false);
+    vf.Write(script); vf.Close();
+    wsh.Run("cscript //NoLogo \"" + vbs + "\"", 0, true);
+  } catch(ex) { return out; }
+  try {
+    if (fso.FileExists(tmp)) {
+      var rf = fso.OpenTextFile(tmp, 1, false);
+      var raw = rf.ReadAll(); rf.Close();
+      try { fso.DeleteFile(tmp); } catch(_) {}
+      try { fso.DeleteFile(vbs); } catch(_) {}
+      var lines = raw.replace(/\r/g,"").split("\n");
+      for (var i=0;i<lines.length;i++) if (lines[i]) out.push(lines[i]);
+    }
+  } catch(ex2) {}
+  return out;
+}
+function addFile(fileObj) {
+  var fp=fileObj.path||fileObj.name;
+  if(!fp||(fp===fileObj.name&&fp.indexOf("\\")<0))return;
+  jobs.push({id:++jobCounter,inputPath:fp,filename:fileObj.name,preset:selectedPreset,status:"pending",log:"",outputPath:""});
+}
+function browseFiles() {
+  // Use the PowerShell picker: true multi-select, proper filter, and no
+  // stuck-state (the hidden HTML file input only returns one file and won't
+  // re-fire when the same path is chosen again).
+  browseWithPowerShell();
+}
+
+function browseWithPowerShell() {
+  var tmp = wsh.ExpandEnvironmentStrings("%TEMP%") + "\\ffbatch_pick.txt";
+  var bat = wsh.ExpandEnvironmentStrings("%TEMP%") + "\\ffbatch_pick.bat";
+  var ps  = appFolder() + "\\pick_files.ps1";
+
+  try {
+    var bf = fso.CreateTextFile(bat, true, false);
+    bf.Write('@powershell.exe -NoProfile -ExecutionPolicy Bypass -File "' + ps + '" -OutFile "' + tmp + '"\r\n');
+    bf.Close();
+    wsh.Run('"' + bat + '"', 0, true);
+  } catch(e) { alert("Browse error: " + e.message); return; }
+
+  try {
+    if (!fso.FileExists(tmp)) return;
+    var sz = 0;
+    try { sz = fso.GetFile(tmp).Size; } catch(_) {}
+    var raw = "";
+    if (sz > 0) {
+      var rf = fso.OpenTextFile(tmp, 1, false);
+      raw = rf.ReadAll(); rf.Close();
+    }
+    try { fso.DeleteFile(tmp); } catch(ex) {}
+    try { fso.DeleteFile(bat); } catch(ex) {}
+    if (!raw) return;
+    // Strip a UTF-8 BOM whether it arrived as one char (\uFEFF) or as the raw
+    // 3 bytes read in ASCII mode (EF BB BF -> \u00EF\u00BB\u00BF).
+    raw = raw.replace(/^\uFEFF/, "").replace(/^\u00EF\u00BB\u00BF/, "");
+    var lines = raw.replace(/\r/g,"").split("\n");
+    var added = 0;
+    for (var i=0; i<lines.length; i++) {
+      var fp = lines[i].replace(/^\uFEFF/,"").replace(/^\u00EF\u00BB\u00BF/,"").replace(/^\s+|\s+$/g,"").replace(/^"|"$/g,"");
+      if (!fp) continue;
+      try { if (addInputFile(fp)) added++; } catch(ex) {}
+    }
+    if (added > 0) { renderJobs(); updateRunButton(); renderPresets(); }
+    else if (raw.replace(/\s/g,"")) {
+      // We got output but nothing resolved to a real file — show why.
+      var first = lines[0] ? lines[0].replace(/^\uFEFF/,"").replace(/^\u00EF\u00BB\u00BF/,"").replace(/^\s+|\s+$/g,"").replace(/^"|"$/g,"") : "";
+      alert("Could not add the selected file(s).\n\nFirst path read:\n" + first + "\n\nIf this looks wrong, the file may have been moved or the path contains unsupported characters.");
+    }
+  } catch(e) {}
+}
+
+
+function fileInputChanged() {
+  var inp = document.getElementById("file-input");
+  if (!inp || !inp.value) return;
+  // In HTA, input.value gives the full path of the FIRST file only
+  var fp = inp.value.replace(/^"|"$/g,"");
+  if (fp && addInputFile(fp)) {
+    renderJobs(); updateRunButton(); renderPresets();
+  }
+  inp.value = "";
+}
+
+
+// ── Output folder ──────────────────────────────────────────
+function pickOutputFolder() {
+  var tmp = wsh.ExpandEnvironmentStrings("%TEMP%") + "\\ffbatch_folder.txt";
+  var bat = wsh.ExpandEnvironmentStrings("%TEMP%") + "\\ffbatch_folder.bat";
+  var ps  = appFolder() + "\\pick_folder.ps1";
+  try {
+    var bf = fso.CreateTextFile(bat, true, false);
+    bf.Write('@powershell.exe -NoProfile -ExecutionPolicy Bypass -File "' + ps + '" -OutFile "' + tmp + '"\r\n');
+    bf.Close();
+    wsh.Run('"' + bat + '"', 0, true);
+  } catch(e) { alert("Browse error: " + e.message); return; }
+  try {
+    if (!fso.FileExists(tmp)) return;
+    // On cancel the helper writes a 0-byte file; ReadAll() on an empty file
+    // throws "Input past end of file", so only read when there's content.
+    var sz = 0;
+    try { sz = fso.GetFile(tmp).Size; } catch(_) {}
+    var raw = "";
+    if (sz > 0) {
+      var rf = fso.OpenTextFile(tmp, 1, false);
+      raw = rf.ReadAll(); rf.Close();
+    }
+    try { fso.DeleteFile(tmp); } catch(ex) {}
+    try { fso.DeleteFile(bat); } catch(ex) {}
+    if (!raw) return;   // cancelled — nothing selected
+    // Strip BOM, all whitespace, quotes — ps1 output can have any of these
+    var folder = raw.replace(/[\r\n]/g,"").replace(/^\uFEFF/,"").replace(/^[\s"]+|[\s"]+$/g,"");
+    if (folder) {
+      outputFolder = folder;
+      document.getElementById("out-path").innerHTML = esc(outputFolder);
+      document.getElementById("btn-resetout").style.display = "";
+    }
+  } catch(e) {}
+}
+function resetOutput() {
+  outputFolder="";
+  document.getElementById("out-path").innerHTML="&mdash; output subfolder next to each input file &mdash;";
+  document.getElementById("btn-resetout").style.display="none";
+}
+function buildOutputPath(job) {
+  var ext=job.preset.outputExt||"mp4";
+  if (job.isSequence) {
+    var base = (job.seqBase || "sequence").replace(/[_\-.]+$/,"") || "sequence";
+    var sfolder = outputFolder || (job.seqFolder + "\\output");
+    try { if(!fso.FolderExists(sfolder)) fso.CreateFolder(sfolder); } catch(e){}
+    return uniqueOutPath(sfolder+"\\"+base+"."+ext, "");
+  }
+  var parts=job.inputPath.split("\\");
+  var nameNoExt=parts[parts.length-1].replace(/\.[^.]+$/,"");
+  var folder=outputFolder||(parts.slice(0,parts.length-1).join("\\")+"\\output");
+  try { if(!fso.FolderExists(folder)) fso.CreateFolder(folder); } catch(e){}
+  return uniqueOutPath(folder+"\\"+nameNoExt+"."+ext, job.inputPath);
+}
+// Never return a path equal to the input (that would make ffmpeg's -y
+// truncate the source before reading it -> "moov atom not found"). Also
+// avoid clobbering an existing file by appending _converted / _1 / _2 ...
+function uniqueOutPath(path, inputPath) {
+  function eqi(a, b) { return a.toLowerCase() === b.toLowerCase(); }
+  var collides = (inputPath && eqi(path, inputPath));
+  var dot = path.lastIndexOf(".");
+  var stem = dot >= 0 ? path.substring(0, dot) : path;
+  var ext  = dot >= 0 ? path.substring(dot) : "";
+  if (collides) path = stem + "_converted" + ext;   // same name as source
+  // make sure we don't equal the input after that either
+  if (inputPath && eqi(path, inputPath)) path = stem + "_converted_1" + ext;
+  return path;
+}
+
+
+// ── Queue ────────────────────────────────────────────────
+function startQueue() {
+  if (running) return;
+  var pending=[];
+  for (var i=0;i<jobs.length;i++) { if(jobs[i].status==="pending") pending.push(jobs[i]); }
+  if (!pending.length||!selectedPreset) return;
+  running=true; stopRequested=false;
+  document.getElementById("btn-run").disabled=true;
+  document.getElementById("btn-stop").style.display="";
+  runNext(pending,0);
+}
+// ── Image-sequence detection ────────────────────────────
+var SEQ_EXTS = {png:1,jpg:1,jpeg:1,bmp:1,tga:1,tif:1,tiff:1,dpx:1,exr:1,webp:1};
+
+function fileExtLower(path) {
+  var nm = path.split("\\").pop();
+  var dot = nm.lastIndexOf(".");
+  return dot >= 0 ? nm.substring(dot + 1).toLowerCase() : "";
+}
+function isImageFile(path) { return !!SEQ_EXTS[fileExtLower(path)]; }
+
+// Inspect an image path and, if it belongs to a numbered sequence, return
+// {folder, pattern, start, count, display, prefix, ext, padded, width}; else null.
+function detectSequence(path) {
+  var slash = path.lastIndexOf("\\");
+  var folder = path.substring(0, slash);
+  var name = path.substring(slash + 1);
+  var dot = name.lastIndexOf(".");
+  if (dot < 0) return null;
+  var ext = name.substring(dot + 1);
+  var base = name.substring(0, dot);                 // filename without extension
+  // trailing run of digits
+  var m = base.match(/^(.*?)(\d+)$/);
+  if (!m) return null;                               // no number → not a sequence
+  var prefix = m[1];
+  var digits = m[2];
+  var width = digits.length;
+
+  // Scan the folder for sibling files: prefix + digits + . + ext (same ext)
+  var nums = [], widths = {};
+  try {
+    var f = fso.GetFolder(folder);
+    var files = new Enumerator(f.Files);
+    var reEsc = prefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    var re = new RegExp("^" + reEsc + "(\\d+)\\." + ext.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$", "i");
+    for (; !files.atEnd(); files.moveNext()) {
+      var fn = files.item().Name;
+      var mm = fn.match(re);
+      if (mm) { nums.push(parseInt(mm[1], 10)); widths[mm[1].length] = 1; }
+    }
+  } catch(e) { return null; }
+
+  if (nums.length < 2) return null;                  // not really a sequence
+
+  // sort ascending, take a consecutive run starting at the lowest number
+  nums.sort(function(a, b){ return a - b; });
+  var start = nums[0], count = 1, prev = start;
+  for (var i = 1; i < nums.length; i++) {
+    if (nums[i] === prev + 1) { count++; prev = nums[i]; }
+    else if (nums[i] === prev) { /* dup, ignore */ }
+    else break;                                      // gap → stop the run
+  }
+
+  // padded if every matching file has the same digit width
+  var wkeys = []; for (var w in widths) wkeys.push(w);
+  var padded = (wkeys.length === 1);
+  var patNum = padded ? ("%0" + width + "d") : "%d";
+  var pattern = prefix + patNum + "." + ext;
+
+  return {
+    folder: folder,
+    pattern: folder + "\\" + pattern,
+    patternName: pattern,
+    start: start,
+    count: count,
+    prefix: prefix,
+    ext: ext,
+    display: prefix + (padded ? repeatChar("#", width) : "#") + "." + ext + "  (" + count + " frames from " + start + ")"
+  };
+}
+function repeatChar(c, n) { var s = ""; for (var i = 0; i < n; i++) s += c; return s; }
+
+function sequenceAlreadyQueued(seq) {
+  for (var i = 0; i < jobs.length; i++) {
+    if (jobs[i].isSequence && jobs[i].inputPath === seq.pattern) return true;
+  }
+  return false;
+}
+
+// Unified entry point for adding any input. Returns true if something was
+// added (or already present), false if it should be skipped.
+function addInputFile(path) {
+  if (!path) return false;
+  try { if (!fso.FileExists(path)) return false; } catch(e) { return false; }
+
+  if (isImageFile(path)) {
+    var seq = detectSequence(path);
+    if (seq) {
+      if (sequenceAlreadyQueued(seq)) return true;   // already added from another frame
+      var seqJob = {
+        id: ++jobCounter,
+        inputPath: seq.pattern,                      // ffmpeg pattern path
+        filename: seq.display,
+        isSequence: true,
+        seqStart: seq.start,
+        seqCount: seq.count,
+        seqFolder: seq.folder,
+        seqBase: seq.prefix || "sequence",
+        ext: seq.ext,
+        preset: selectedPreset, status: "pending", log: "", outputPath: ""
+      };
+      jobs.push(seqJob);
+      scheduleProbe(seqJob);
+      return true;
+    }
+  }
+  var newJob = { id: ++jobCounter, inputPath: path, filename: fso.GetFileName(path),
+              preset: selectedPreset, status: "pending", log: "", outputPath: "" };
+  jobs.push(newJob);
+  scheduleProbe(newJob);
+  return true;
+}
+
+
+function runNext(pending,idx) {
+  if (stopRequested||idx>=pending.length) {
+    running=false; stopRequested=false;
+    document.getElementById("btn-run").disabled=false;
+    document.getElementById("btn-stop").style.display="none";
+    updateRunButton(); return;
+  }
+  var job=pending[idx];
+  job.preset=selectedPreset; job.outputPath=buildOutputPath(job);
+  job.status="running"; job.log="";
+  renderJobs(); updateTally();
+  var tmp=wsh.ExpandEnvironmentStrings("%TEMP%");
+  var bat=tmp+"\\ffbatch_"+job.id+".bat";
+  var log=tmp+"\\ffbatch_"+job.id+".log";
+  var ffmpeg=ffmpegPath();
+  var inArgs = job.preset.inputArgs ? (job.preset.inputArgs + " ") : "";
+  var cmd;
+  if (job.isSequence) {
+    // Image sequence: pattern input, with start number and frame count.
+    // Ensure an input framerate is present (default 30) so timing is sane.
+    var seqIn = inArgs;
+    if (seqIn.indexOf("-r ") < 0 && seqIn.indexOf("-framerate ") < 0) seqIn = "-framerate 30 " + seqIn;
+    seqIn = "-start_number " + job.seqStart + " " + seqIn;
+    var flat = job.preset.flatten;   // e.g. "white" / "black" — composite away transparency
+    if (flat) {
+      // PNG/TGA transparency carries arbitrary RGB under alpha (often black),
+      // which turns into a dark video under yuv420p. Composite each frame onto
+      // a solid colour first. scale2ref sizes the background to the frames.
+      var fc = "color=c=" + flat + "[bg];[bg][0:v]scale2ref[bg2][fg];[bg2][fg]overlay=shortest=1,format=yuv420p[v]";
+      cmd='@echo off\n'+ffmpeg+' -y '+seqIn+'-i "'+job.inputPath+'" -filter_complex "'+fc+'" -map "[v]" -frames:v '+job.seqCount+' '+job.preset.args+' "'+job.outputPath+'" > "'+log+'" 2>&1\necho EXIT_CODE=%ERRORLEVEL% >> "'+log+'"\n';
+    } else {
+      cmd='@echo off\n'+ffmpeg+' -y '+seqIn+'-i "'+job.inputPath+'" -frames:v '+job.seqCount+' '+job.preset.args+' "'+job.outputPath+'" > "'+log+'" 2>&1\necho EXIT_CODE=%ERRORLEVEL% >> "'+log+'"\n';
+    }
+  } else {
+    cmd='@echo off\n'+ffmpeg+' -y '+inArgs+'-i "'+job.inputPath+'" '+job.preset.args+' "'+job.outputPath+'" > "'+log+'" 2>&1\necho EXIT_CODE=%ERRORLEVEL% >> "'+log+'"\n';
+  }
+  try { var bf=fso.CreateTextFile(bat,true,false); bf.Write(cmd); bf.Close(); }
+  catch(e) { job.status="error"; job.log="Failed: "+e.message; renderJobs(); runNext(pending,idx+1); return; }
+  wsh.Run('"'+bat+'"',0,false);
+  pollJob(job,bat,log,pending,idx);
+}
+function parseTimeSec(s) {
+  if (!s) return 0;
+  var p=s.split(":"); if(p.length<3) return 0;
+  return parseFloat(p[0])*3600+parseFloat(p[1])*60+parseFloat(p[2]);
+}
+function fmtSec(sec) {
+  if (isNaN(sec)||sec<0) return "--:--";
+  sec=Math.round(sec);
+  var h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60),s=sec%60;
+  if(h>0) return h+":"+(m<10?"0"+m:m)+":"+(s<10?"0"+s:s);
+  return (m<10?"0"+m:m)+":"+(s<10?"0"+s:s);
+}
+function fmtBytes(b) {
+  if(!b||b<0) return "0 B";
+  if(b<1024) return b+" B";
+  if(b<1048576) return (b/1024).toFixed(1)+" KB";
+  if(b<1073741824) return (b/1048576).toFixed(1)+" MB";
+  return (b/1073741824).toFixed(2)+" GB";
+}
+
+function pollJob(job,bat,log,pending,idx) {
+  if (stopRequested) { job.status="cancelled"; cleanup(bat,log); renderJobs(); runNext(pending,idx+1); return; }
+  if (job.aborted) { job.status="cancelled"; try{ if(job.outputPath && fso.FileExists(job.outputPath)) fso.DeleteFile(job.outputPath); }catch(_){} cleanup(bat,log); renderJobs(); updateTally(); runNext(pending,idx+1); return; }
+  var done=false, code=-1;
+  try {
+    if (fso.FileExists(log)) {
+      var lf=fso.OpenTextFile(log,1,false); var txt=lf.ReadAll(); lf.Close();
+      job.log=txt;
+      var logEl=document.getElementById("jlog-"+job.id);
+      if (logEl && logEl.style.display !== "none") {
+        // Only touch the DOM when the log is actually open, and only
+        // auto-scroll if the user is already near the bottom — otherwise we
+        // fight their manual scrolling and cause repaint trails in IE.
+        var nearBottom = (logEl.scrollTop + logEl.clientHeight >= logEl.scrollHeight - 20);
+        if (logEl.innerText !== txt) logEl.innerText = txt;
+        if (nearBottom) logEl.scrollTop = logEl.scrollHeight;
+      }
+
+      // Parse total duration once from header
+      if (!job.totalSec) {
+        var dm=txt.match(/Duration:\s*(\d+):(\d+):([\d.]+)/);
+        if (dm) job.totalSec=parseFloat(dm[1])*3600+parseFloat(dm[2])*60+parseFloat(dm[3]);
+      }
+
+      // Parse the most recent ffmpeg progress data. ffmpeg rewrites a
+      // status line repeatedly using carriage returns, e.g.:
+      //   frame= 419 fps= 30 q=28.0 size=  21504kB time=00:04:57.12 bitrate= 592.2kbits/s speed=6.99x
+      // Field order and spacing vary between builds, and early lines can
+      // read "size=N/A"/"bitrate=N/A", so we grab each field independently
+      // from the tail of the log rather than requiring one rigid match.
+      var tail = txt.length > 4000 ? txt.substring(txt.length - 4000) : txt;
+      // isolate the text after the last "frame=" so we read the newest values
+      var lastFrameIdx = tail.lastIndexOf("frame=");
+      var chunk = lastFrameIdx >= 0 ? tail.substring(lastFrameIdx) : tail;
+      // the status line ends at the next CR/LF after this frame token
+      var nl = chunk.search(/[\r\n]/);
+      if (nl > 0) {
+        var after = chunk.substring(nl);
+        // keep scanning while later "frame=" tokens exist in the buffer
+        var nextFrame = after.indexOf("frame=");
+        while (nextFrame >= 0) {
+          chunk = after.substring(nextFrame);
+          var nl2 = chunk.search(/[\r\n]/);
+          if (nl2 <= 0) break;
+          after = chunk.substring(nl2);
+          nextFrame = after.indexOf("frame=");
+        }
+      }
+      var mFrame = chunk.match(/frame=\s*(\d+)/);
+      var mFps   = chunk.match(/fps=\s*([\d.]+)/);
+      var mSize  = chunk.match(/L?size=\s*(\d+)\s*kB/i);
+      var mTime  = chunk.match(/time=\s*(\d+:\d+:[\d.]+)/);
+      var mBr    = chunk.match(/bitrate=\s*([\d.]+\s*\S+)/);
+      var mSpeed = chunk.match(/speed=\s*([\d.]+)\s*x/);
+      if (mTime) {
+        if (!job.prog) job.prog = {};
+        if (mFrame) job.prog.frame   = parseInt(mFrame[1]);
+        if (mFps)   job.prog.fps     = parseFloat(mFps[1]);
+        if (mSize)  job.prog.sizeKB  = parseInt(mSize[1]);
+        job.prog.timeSec = parseTimeSec(mTime[1]);
+        job.prog.bitrate = mBr ? mBr[1].replace(/\s+/g,"") : (job.prog.bitrate||"&mdash;");
+        if (mSpeed) job.prog.speed   = parseFloat(mSpeed[1]);
+        if (job.prog.fps===undefined)   job.prog.fps = 0;
+        if (job.prog.speed===undefined) job.prog.speed = 0;
+      }
+
+      // Output file size + write speed
+      var now=(new Date()).getTime();
+      if (job.outputPath) {
+        try { if (fso.FileExists(job.outputPath)) { job.outSizeBytes=fso.GetFile(job.outputPath).Size; } } catch(ex){}
+      }
+      if (!job.lastSizeTime) { job.lastSizeTime=now; job.lastSizeBytes=0; }
+      var dt=(now-job.lastSizeTime)/1000;
+      if (dt>=0.8 && job.outSizeBytes) {
+        job.writeBps=(job.outSizeBytes-(job.lastSizeBytes||0))/dt;
+        job.lastSizeBytes=job.outSizeBytes; job.lastSizeTime=now;
+      }
+
+      var exitM=txt.match(/EXIT_CODE=(\d+)/);
+      if (exitM) { done=true; code=parseInt(exitM[1]); }
+
+      liveUpdateJob(job);
+    }
+  } catch(e){}
+  if (done) {
+    job.status=code===0?"done":"error";
+    cleanup(bat,log); renderJobs(); updateTally(); runNext(pending,idx+1);
+  } else {
+    window.setTimeout(function(){pollJob(job,bat,log,pending,idx);},800);
+  }
+}
+
+function liveUpdateJob(job) {
+  var t=getT();
+  var p=job.prog;
+  var pct=0;
+  if (p && job.totalSec>0) pct=Math.min(100,(p.timeSec/job.totalSec)*100);
+
+  var progWrap=document.getElementById("jprog-"+job.id);
+  var barEl=document.getElementById("jpbar-"+job.id);
+  if (progWrap) { progWrap.style.display="block"; progWrap.style.background=t.bord; }
+  if (barEl)    { barEl.style.width=pct+"%"; barEl.style.background=t.ac; }
+
+  var tlWrap=document.getElementById("jtl-"+job.id);
+  var tlFill=document.getElementById("jtlfill-"+job.id);
+  var tlLabel=document.getElementById("jtllabel-"+job.id);
+  if (tlWrap)  { tlWrap.style.display="block"; tlWrap.style.borderColor=t.bord; }
+  if (tlFill)  { tlFill.style.width=pct+"%"; tlFill.style.background=t.ac; }
+  if (tlLabel) {
+    tlLabel.style.color=t.text;
+    if (p && job.totalSec) {
+      var etaStr="";
+      if (p.speed>0) etaStr="  ETA "+fmtSec((job.totalSec-p.timeSec)/p.speed);
+      tlLabel.innerText=fmtSec(p.timeSec)+" / "+fmtSec(job.totalSec)+"  "+Math.round(pct)+"%"+etaStr;
+    } else {
+      tlLabel.innerText="Converting...";
+    }
+  }
+
+  var statsEl=document.getElementById("jstats-"+job.id);
+  if (statsEl && p) {
+    statsEl.style.display="block";
+    var ws=job.writeBps?fmtBytes(job.writeBps)+"/s":"&mdash;";
+    var sz=job.outSizeBytes?fmtBytes(job.outSizeBytes):"&mdash;";
+    statsEl.innerHTML=
+      '<span style="color:'+t.muted+'">FPS&nbsp;</span><b style="color:'+t.text+'">'+p.fps+'</b>'
+      +'<span style="color:'+t.bord+'">&nbsp;|&nbsp;</span>'
+      +'<span style="color:'+t.muted+'">Speed&nbsp;</span><b style="color:'+t.ac+'">'+p.speed+'x</b>'
+      +'<span style="color:'+t.bord+'">&nbsp;|&nbsp;</span>'
+      +'<span style="color:'+t.muted+'">Bitrate&nbsp;</span><b style="color:'+t.text+'">'+p.bitrate+'</b>'
+      +'<span style="color:'+t.bord+'">&nbsp;|&nbsp;</span>'
+      +'<span style="color:'+t.muted+'">Written&nbsp;</span><b style="color:'+t.text+'">'+sz+'</b>'
+      +'<span style="color:'+t.bord+'">&nbsp;|&nbsp;</span>'
+      +'<span style="color:'+t.muted+'">Write&nbsp;</span><b style="color:'+t.text+'">'+ws+'</b>';
+  }
+}
+function cleanup(bat,log) {
+  try{if(fso.FileExists(bat))fso.DeleteFile(bat);}catch(e){}
+  try{if(fso.FileExists(log))fso.DeleteFile(log);}catch(e){}
+}
+function stopAll() {
+  stopRequested=true;
+  try{wsh.Run("taskkill /F /IM ffmpeg.exe",0,false);}catch(e){}
+}
+function abortJob(id) {
+  // Abort just this running job, then carry on with the rest of the queue.
+  for(var i=0;i<jobs.length;i++){
+    if(jobs[i].id===id && jobs[i].status==="running"){
+      jobs[i].aborted=true;
+      // Only one ffmpeg runs at a time, so killing the process kills this job.
+      try{wsh.Run("taskkill /F /IM ffmpeg.exe",0,false);}catch(e){}
+      return;
+    }
+  }
+}
+function restartJob(id) {
+  // Reset an errored / cancelled / done job back to pending and kick off the
+  // queue so it runs again. Clears all per-run progress state.
+  for(var i=0;i<jobs.length;i++){
+    var j=jobs[i];
+    if(j.id===id){
+      if(j.status==="running") return;   // can't restart a running job
+      j.status="pending"; j.aborted=false; j.log="";
+      j.prog=null; j.totalSec=0; j.outputPath="";
+      j.outSizeBytes=0; j.lastSizeBytes=0; j.lastSizeTime=0; j.writeBps=0;
+      renderJobs(); updateTally(); updateRunButton();
+      if(!running) {
+        if(selectedPreset) startQueue();
+        else alert("Select a preset first, then the job will run.");
+      }
+      return;
+    }
+  }
+}
+function clearDone() {
+  var kept=[];
+  for(var i=0;i<jobs.length;i++){var s=jobs[i].status;if(s!=="done"&&s!=="error"&&s!=="cancelled")kept.push(jobs[i]);}
+  jobs=kept; renderJobs(); updateTally(); updateRunButton(); renderPresets();
+}
+function removeJob(id) {
+  var kept=[];
+  for(var i=0;i<jobs.length;i++){if(jobs[i].id!==id)kept.push(jobs[i]);}
+  jobs=kept; renderJobs(); updateTally(); updateRunButton();
+}
+function revealFile(path) { try{wsh.Run('explorer /select,"'+path+'"');}catch(e){} }
+function toggleLog(id) {
+  var el=document.getElementById("jlog-"+id);
+  var btn=document.getElementById("jlogtoggle-"+id);
+  if(!el)return;
+  if(el.style.display==="block"){el.style.display="none";btn.innerText="Show log";}
+  else{el.style.display="block";btn.innerText="Hide log";}
+}
+
+// ── Render jobs ──────────────────────────────────────────
+// Pull a concise, human-useful error line out of an ffmpeg log.
+function ffmpegErrorReason(log) {
+  if (!log) return "";
+  var lines = log.replace(/\r/g, "\n").split("\n");
+  var patterns = [
+    /Only VP8.*permitted.*WebM/i,
+    /Could not find tag for codec\s+\S+/i,
+    /Unable to find a suitable output format/i,
+    /Unknown encoder\s+\S+/i,
+    /Encoder .* not found/i,
+    /Requested output format .* is not (a suitable|known)/i,
+    /Width and height .* not.*allowed/i,
+    /does not contain any stream/i,
+    /No such file or directory/i,
+    /Invalid argument/i,
+    /Conversion failed/i
+  ];
+  for (var pi = 0; pi < patterns.length; pi++) {
+    for (var i = lines.length - 1; i >= 0; i--) {
+      if (patterns[pi].test(lines[i])) {
+        var s = lines[i].replace(/^\s+|\s+$/g, "");
+        if (s.length > 140) s = s.substring(0, 137) + "...";
+        return s;
+      }
+    }
+  }
+  for (var j = lines.length - 1; j >= 0; j--) {
+    var tt = lines[j].replace(/^\s+|\s+$/g, "");
+    if (tt && tt.indexOf("EXIT_CODE=") < 0 && /error|fail|invalid|cannot|could not|no such/i.test(tt)) {
+      if (tt.length > 140) tt = tt.substring(0, 137) + "...";
+      return tt;
+    }
+  }
+  return "Conversion failed - see log for details.";
+}
+
+function renderJobs() {
+  var t=getT();
+  var list=document.getElementById("job-list");
+  var empty=document.getElementById("queue-empty");
+  if(!jobs.length){list.innerHTML="";empty.style.display="";return;}
+  empty.style.display="none";
+
+  // Refresh suggestion scores based on the first probed job
+  refreshMatchScores(jobs);
+
+  var html="";
+  for(var i=0;i<jobs.length;i++){
+    var job=jobs[i];
+    var pname=job.preset?job.preset.name:"\u2014";
+    var outname=job.outputPath?job.outputPath.split("\\").pop():"";
+    var meta=esc(pname)+(outname?" &rarr; "+esc(outname):"");
+    // For failed jobs, surface ffmpeg's actual error line so the cause is clear.
+    if (job.status==="error") {
+      var reason = ffmpegErrorReason(job.log);
+      if (reason) meta += '<div style="color:'+t.err+';margin-top:3px;font-size:11px;">'+esc(reason)+'</div>';
+    }
+    var bordCol = job.status==="running"?t.ac : job.status==="done"?t.ok : job.status==="error"?t.err : t.bord;
+    var statusCol = job.status==="running"?t.ac : job.status==="done"?t.ok : job.status==="error"?t.err : t.muted;
+    var actions="";
+    if(job.status==="running") actions+='<button onclick="abortJob('+job.id+')" style="border-color:'+t.err+';color:'+t.err+'">&#9632; Abort</button>';
+    if(job.status==="error"||job.status==="cancelled") actions+='<button onclick="restartJob('+job.id+')" style="border-color:'+t.ac+';color:'+t.ac+'">&#8635; Restart</button>';
+    if(job.status==="done") actions+='<button onclick="restartJob('+job.id+')" style="border-color:'+t.bord+';color:'+t.muted+'">&#8635; Re-run</button>';
+    if(job.status==="done") actions+='<button onclick="revealFile(\''+escJs(job.outputPath)+'\')  " style="border-color:'+t.bord+';color:'+t.muted+'">Show file</button>';
+    if(job.status==="pending"||job.status==="error"||job.status==="cancelled") actions+='<button onclick="removeJob('+job.id+')" style="border-color:'+t.bord+';color:'+t.muted+'">Remove</button>';
+    // Inspect button — always shown; dimmed if probe not yet available
+    var inspectCol = (job.probe && job.probe.ok) ? t.ac : t.muted;
+    actions += '<button onclick="openInspect('+job.id+')" style="border-color:'+t.bord+';color:'+inspectCol+'" title="Inspect file info">\u2139</button>';
+
+    var logToggle=job.log?'<button class="job-log-btn" id="jlogtoggle-'+job.id+'" onclick="toggleLog('+job.id+')" style="color:'+t.muted+'">Show log</button>':"";
+
+    var pct=0;
+    if (job.prog && job.totalSec>0) pct=Math.min(100,(job.prog.timeSec/job.totalSec)*100);
+    if (job.status==="done") pct=100;
+    var showProg=(job.status==="running"||(job.status==="done"&&pct>0));
+    var barColor=job.status==="done"?t.ok:t.ac;
+
+    // ── Probe info strip ──
+    var probeHtml = "";
+    if (job.probe && job.probe.ok) {
+      var p = job.probe;
+      var bits = [];
+      if (p.hasVideo) {
+        if (p.width && p.height) bits.push(p.width + "\xd7" + p.height);
+        if (p.vcodec) bits.push(p.vcodec);
+        if (p.fps)    bits.push(p.fps + "fps");
+        if (p.colorSpace) bits.push(p.colorSpace);
+      }
+      if (p.hasAudio) {
+        bits.push(p.acodec + (p.channels ? " " + p.channels + "ch" : ""));
+      }
+      if (p.duration) bits.push(fmtSec(p.duration));
+      if (p.bitrate)  bits.push(Math.round(p.bitrate/1000) + "kbps");
+      if (bits.length) {
+        probeHtml = '<div class="job-probe" style="color:'+t.muted+'">'
+          + bits.join('<span style="color:'+t.bord+'"> &nbsp;&#183;&nbsp; </span>')
+          + '</div>';
+      }
+    } else if (job.probe && !job.probe.ok) {
+      // Probe ran but failed (ffprobe not found or unreadable file)
+      probeHtml = '<div class="job-probe" style="color:'+t.muted+'">probe unavailable</div>';
+    }
+    // probing in progress — show a placeholder only if still pending
+    if (!job.probe && job.status === "pending") {
+      probeHtml = '<div class="job-probe" style="color:'+t.muted+'">probing\u2026</div>';
+    }
+
+    // ── Warning strip ──
+    var warnHtml = "";
+    var warnTxt = probeWarning(job, job.preset);
+    if (warnTxt) {
+      warnHtml = '<div class="job-warn" style="background:'+t.surf2+';color:#e0a000;border:1px solid #a07000;">'
+        + '\u26a0 ' + esc(warnTxt) + '</div>';
+    }
+
+    // ── FPS hint for sequences ──
+    var fpsHintHtml = "";
+    var fpsHint = seqFpsHint(job, job.preset);
+    if (fpsHint) {
+      fpsHintHtml = '<div class="job-probe" style="color:'+t.muted+';font-style:italic;">\u2139 '+esc(fpsHint)+'</div>';
+    }
+
+    // ── Size estimate ──
+    var estimateHtml = "";
+    if (job.status === "pending" || job.status === "error" || job.status === "cancelled") {
+      var est = estimateOutputSize(job, job.preset);
+      if (est) {
+        estimateHtml = '<div class="job-estimate" style="color:'+t.muted+'">'
+          + '<span style="color:'+t.bord+'">src&nbsp;</span>'
+          + (job.probe && job.probe.bitrate ? Math.round(job.probe.bitrate/1000)+'kbps' : '?')
+          + '&nbsp;&rarr;&nbsp;'
+          + esc(est)
+          + '</div>';
+      }
+    }
+    // After done: show actual output size
+    if (job.status === "done" && job.outputPath) {
+      try {
+        if (fso.FileExists(job.outputPath)) {
+          var outSz = fso.GetFile(job.outputPath).Size;
+          var inSz = 0;
+          if (!job.isSequence) { try { inSz = fso.GetFile(job.inputPath).Size; } catch(_){} }
+          var sizeNote = fmtBytes(outSz);
+          if (inSz > 0) {
+            var ratio = (outSz / inSz * 100).toFixed(0);
+            sizeNote += "  (" + ratio + "% of source)";
+          }
+          estimateHtml = '<div class="job-estimate" style="color:'+t.muted+'">Output: <b style="color:'+t.ok+'">'+esc(sizeNote)+'</b></div>';
+        }
+      } catch(_) {}
+    }
+
+    html+='<div class="job-row" style="background:'+t.surf+';border-color:'+bordCol+'">'
+        +'<div class="job-top"><table width="100%"><tr>'
+        +'<td class="job-name-cell"><div class="job-filename" title="'+esc(job.inputPath)+'" style="color:'+t.text+'">'+esc(job.filename)+'</div>'
+        +'<div class="job-meta" style="color:'+t.muted+'">'+meta+'</div></td>'
+        +'<td class="job-right"><span class="job-status" style="color:'+statusCol+';border-color:'+statusCol+'">'+job.status.toUpperCase()+'</span>'
+        +'<span class="job-btns">'+actions+'</span></td>'
+        +'</tr></table></div>'
+        + probeHtml
+        + warnHtml
+        + fpsHintHtml
+        + estimateHtml
+        +'<div class="job-progress" id="jprog-'+job.id+'" style="display:'+(showProg?"block":"none")+';background:'+t.bord+'">'
+        +'<div class="job-progress-bar" id="jpbar-'+job.id+'" style="width:'+pct+'%;background:'+barColor+'"></div>'
+        +'</div>'
+        +'<div class="job-timeline" id="jtl-'+job.id+'" style="display:'+(showProg?"block":"none")+';border-color:'+t.bord+'">'
+        +'<div class="job-timeline-fill" id="jtlfill-'+job.id+'" style="width:'+pct+'%;background:'+barColor+'"></div>'
+        +'<div class="job-timeline-label" id="jtllabel-'+job.id+'" style="color:'+t.text+'">'
+        +(job.status==="done"?'&#10003; Done &mdash; '+fmtSec(job.totalSec||0)
+          :job.status==="running"&&job.prog&&job.totalSec?fmtSec(job.prog.timeSec)+" / "+fmtSec(job.totalSec)+"   "+Math.round(pct)+"%"
+          :job.status==="running"?"Converting...":"")
+        +'</div>'
+        +'</div>'
+        +'<div class="job-stats" id="jstats-'+job.id+'" style="display:'+(job.status==="running"&&job.prog?"block":"none")+';color:'+t.muted+'">'
+        +(job.prog&&job.status==="running"?
+          '<span>FPS&nbsp;</span><b style="color:'+t.text+'">'+job.prog.fps+'</b>'
+          +'<span style="color:'+t.bord+'">' +' &nbsp;|&nbsp; </span>'
+          +'<span>Speed&nbsp;</span><b style="color:'+t.ac+'">'+job.prog.speed+'x</b>'
+          +'<span style="color:'+t.bord+'">&nbsp;|&nbsp;</span>'
+          +'<span>Bitrate&nbsp;</span><b style="color:'+t.text+'">'+job.prog.bitrate+'</b>'
+          :'')
+        +'</div>'
+        +logToggle
+        +'<div class="job-log" id="jlog-'+job.id+'" style="background:'+t.logBg+';border-color:'+t.bord+';color:'+t.muted+'">'+esc(job.log)+'</div>'
+        +'</div>';
+  }
+  list.innerHTML=html;
+}
+
+function updateTally() {
+  var t=getT();
+  var done=0,err=0,pend=0,run=0;
+  for(var i=0;i<jobs.length;i++){var s=jobs[i].status;if(s==="done")done++;else if(s==="error")err++;else if(s==="pending")pend++;else if(s==="running")run++;}
+  if(!jobs.length){document.getElementById("tally").innerHTML="No jobs";document.getElementById("tally").style.color=t.muted;return;}
+  var p=[];
+  if(run) p.push(run+" converting");
+  if(pend)p.push(pend+" pending");
+  if(done)p.push(done+" done");
+  if(err) p.push(err+" failed");
+  document.getElementById("tally").innerHTML=p.join(" &middot; ");
+  document.getElementById("tally").style.color=t.muted;
+}
+function updateRunButton() {
+  var t=getT();
+  var hasPending=false;
+  for(var i=0;i<jobs.length;i++){if(jobs[i].status==="pending"){hasPending=true;break;}}
+  var ok=hasPending&&selectedPreset&&!running;
+  document.getElementById("btn-run").disabled=!ok;
+  document.getElementById("btn-run").style.opacity=ok?"1":"0.35";
+}
+function ffmpegPath() {
+  var local=appFolder()+"\\ffmpeg.exe";
+  if(fso.FileExists(local)) return '"'+local+'"';
+  return "ffmpeg";
+}
+function esc(s){if(!s)return"";return(""+s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+function escJs(s){return(""+s).replace(/\\/g,"\\\\").replace(/'/g,"\\'");}
+</script>
+</body>
+</html>
