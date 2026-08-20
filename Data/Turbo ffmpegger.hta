@@ -1,5 +1,6 @@
 <html>
 <head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <title>Turbo ffmpegger</title>
 <HTA:APPLICATION
   ID="FFmpegBatch"
@@ -31,6 +32,18 @@ body {
   top: 0; left: 0;
   width: 980px; height: 700px;
   overflow: hidden;
+}
+
+/* Animated background canvas sits behind the UI. The header/sidebar/toolbar
+   paint their own opaque fills on top; the main panel is transparent, so the
+   drifting themed glow shows through the drop-zone / queue area. */
+#bg-canvas { position: absolute; top: 0; left: 0; width: 980px; height: 700px; z-index: 0; }
+#header, #body-wrap, #toolbar { z-index: 1; }
+
+/* Stylised popups: soft rounded corners + drop shadow (JS drives the bounce). */
+#apply-box, #inspect-box, #editor-box {
+  border-radius: 10px;
+  box-shadow: 0 18px 55px rgba(0,0,0,0.55);
 }
 
 /* ── Header ── */
@@ -319,6 +332,25 @@ body {
   cursor: pointer; font-family: Segoe UI, sans-serif;
   border-width: 2px; border-style: solid; margin: 2px;
 }
+#fancy-toggle {
+  display: block; width: 100%; padding: 6px 4px; margin: 2px 2px 8px;
+  font-size: 11px; font-weight: 700; text-align: center;
+  cursor: pointer; font-family: Segoe UI, sans-serif;
+  border-width: 2px; border-style: solid; background: none;
+}
+.pat-swatch {
+  display: block; width: 100%; padding: 5px 4px; margin: 2px;
+  font-size: 10px; font-weight: 700; text-align: center;
+  cursor: pointer; font-family: Segoe UI, sans-serif;
+  border-width: 2px; border-style: solid; background: none;
+}
+.pat-swatch[disabled] { cursor: default; }
+.lang-swatch {
+  display: block; width: 100%; padding: 5px 4px; margin: 2px;
+  font-size: 10px; font-weight: 700; text-align: center;
+  cursor: pointer; font-family: Segoe UI, sans-serif;
+  border-width: 2px; border-style: solid; background: none;
+}
 .settings-sep { border-top-width:1px; border-top-style:solid; margin: 10px 0 8px; }
 .settings-panel-btn {
   display:block; width:100%; background:none; font-size:11px;
@@ -416,6 +448,7 @@ body {
 </head>
 <body id="body">
 <div id="app-root">
+<canvas id="bg-canvas" width="980" height="700"></canvas>
 
 <div id="header">
   <table id="header-inner" width="100%"><tr>
@@ -429,6 +462,21 @@ body {
 </div>
 
 <div id="settings-panel">
+  <h3 id="settings-bg-title">Background</h3>
+  <button id="fancy-toggle" onclick="toggleFancy()">Fancy graphics: On</button>
+  <table width="100%">
+    <tr>
+      <td><button class="pat-swatch" id="pat-ambient"       onclick="chooseBgPattern('ambient')">Ambient</button></td>
+      <td><button class="pat-swatch" id="pat-constellation" onclick="chooseBgPattern('constellation')">Futuristic</button></td>
+      <td><button class="pat-swatch" id="pat-waves"         onclick="chooseBgPattern('waves')">Waves</button></td>
+    </tr>
+    <tr>
+      <td><button class="pat-swatch" id="pat-magic"        onclick="chooseBgPattern('magic')">Magic</button></td>
+      <td><button class="pat-swatch" id="pat-starfield"     onclick="chooseBgPattern('starfield')">Starfield</button></td>
+      <td><button class="pat-swatch" id="pat-aurora"        onclick="chooseBgPattern('aurora')">Aurora</button></td>
+    </tr>
+  </table>
+  <div class="settings-sep" id="settings-sep0"></div>
   <h3 id="settings-title">Colour Theme</h3>
   <table width="100%">
     <tr>
@@ -473,6 +521,22 @@ body {
     </td>
   </tr></table>
   <div class="settings-sep" id="settings-sep2"></div>
+  <h3 id="settings-lang-title">Language</h3>
+  <table width="100%">
+    <tr>
+      <td><button class="lang-swatch" id="lang-en" onclick="chooseLang('en')">English</button></td>
+      <td><button class="lang-swatch" id="lang-nl" onclick="chooseLang('nl')">Nederlands</button></td>
+    </tr>
+    <tr>
+      <td><button class="lang-swatch" id="lang-ja" onclick="chooseLang('ja')">&#26085;&#26412;&#35486;</button></td>
+      <td><button class="lang-swatch" id="lang-zh" onclick="chooseLang('zh')">&#20013;&#25991;</button></td>
+    </tr>
+    <tr>
+      <td><button class="lang-swatch" id="lang-ko" onclick="chooseLang('ko')">&#54620;&#44397;&#50612;</button></td>
+      <td></td>
+    </tr>
+  </table>
+  <div class="settings-sep" id="settings-sep3"></div>
   <button class="settings-panel-btn" id="sp-editbtn"   onclick="editPresets()">Open presets.json</button>
   <button class="settings-panel-btn" id="sp-reloadbtn" onclick="reloadPresets()">&#8635; Reload presets</button>
 </div>
@@ -585,8 +649,1062 @@ var editingId      = null;
 var searchTerm     = "";
 var currentTheme   = "amber";
 var currentScale = 1;
+var fancyEnabled = true;      // animated background on/off
+var bgPattern    = "ambient"; // which background pattern is active
+var currentLang  = "en";      // en | nl | ja | zh | ko
+
+// ══ Localisation ══════════════════════════════════════════════════════════
+// Icons stay in code; only the words are translated here. {n}/{m} are filled by L().
+var LANG = {
+  en: {
+    editpresets:"Edit presets.json", settings:"Settings",
+    sec_bg:"Background", sec_theme:"Colour Theme", sec_scale:"UI Scale", sec_lang:"Language", zoom:"Zoom",
+    fancy:"Fancy graphics", on:"On", off:"Off",
+    pat_ambient:"Ambient", pat_futuristic:"Futuristic", pat_waves:"Waves", pat_magic:"Magic", pat_starfield:"Starfield", pat_aurora:"Aurora",
+    openpresets:"Open presets.json", reload:"Reload presets",
+    filter_ph:"Filter presets (name, format, quality)...", fav_only:"Favourites only", compat_only:"Compatible only",
+    drop_title:"Drop files here", drop_sub:"video & audio files \u2014 or click Browse", browse_files:"Browse files\u2026",
+    output_folder:"Output folder", output_default:"output subfolder next to each input file", browse:"Browse\u2026", reset:"Reset",
+    empty_text:"Drop files and pick a preset to get started",
+    clear_done:"Clear done", stop_all:"Stop all", convert:"Convert",
+    no_jobs:"No jobs", t_pending:"pending", t_converting:"converting", t_done:"done", t_failed:"failed",
+    st_pending:"PENDING", st_running:"RUNNING", st_done:"DONE", st_error:"ERROR", st_cancelled:"CANCELLED",
+    abort:"Abort", restart:"Restart", rerun:"Re-run", show_file:"Show file", remove:"Remove", show_log:"Show log", hide_log:"Hide log", inspect:"Inspect",
+    converting:"Converting\u2026", done:"Done",
+    apply_title:"Apply preset to pending jobs?", apply_q:"You have {n} pending jobs. Apply this preset to all of them, or only the {m} selected?", apply_none:"No jobs are selected.",
+    apply_all:"Apply to all ({n})", apply_selected:"Only selected ({n})", cancel:"Cancel",
+    ed_title_new:"New custom template", ed_title_edit:"Edit / duplicate template",
+    ed_name:"Template name", ed_applies:"Applies to input", ed_outfmt:"Output format", ed_vcodec:"Video codec", ed_speed:"Encode speed",
+    ed_res:"Resolution (WxH, blank = keep)", ed_crf:"Compression / CRF (0-51, lower = better)", ed_fps:"Frame rate / FPS (blank = keep)",
+    ed_acodec:"Audio codec", ed_abr:"Audio bitrate (blank = keep)", ed_extra:"Extra ffmpeg args (advanced, optional)", ed_inargs:"Input args, placed before -i (advanced, e.g. image sequences)",
+    ed_save:"Save as custom template", ed_anyfmt:"Any format",
+    grp_custom:"Custom", new_custom:"+ New custom template", close:"Close"
+  },
+  nl: {
+    editpresets:"presets.json bewerken", settings:"Instellingen",
+    sec_bg:"Achtergrond", sec_theme:"Kleurthema", sec_scale:"UI-schaal", sec_lang:"Taal", zoom:"Zoom",
+    fancy:"Mooie graphics", on:"Aan", off:"Uit",
+    pat_ambient:"Sfeervol", pat_futuristic:"Futuristisch", pat_waves:"Golven", pat_magic:"Magie", pat_starfield:"Sterren", pat_aurora:"Aurora",
+    openpresets:"presets.json openen", reload:"Presets herladen",
+    filter_ph:"Presets filteren (naam, formaat, kwaliteit)...", fav_only:"Alleen favorieten", compat_only:"Alleen compatibel",
+    drop_title:"Sleep bestanden hierheen", drop_sub:"video- & audiobestanden \u2014 of klik op Bladeren", browse_files:"Bladeren\u2026",
+    output_folder:"Uitvoermap", output_default:"uitvoer-submap naast elk invoerbestand", browse:"Bladeren\u2026", reset:"Herstellen",
+    empty_text:"Sleep bestanden en kies een preset om te beginnen",
+    clear_done:"Voltooide wissen", stop_all:"Alles stoppen", convert:"Converteren",
+    no_jobs:"Geen taken", t_pending:"in wachtrij", t_converting:"bezig", t_done:"voltooid", t_failed:"mislukt",
+    st_pending:"WACHTRIJ", st_running:"BEZIG", st_done:"VOLTOOID", st_error:"FOUT", st_cancelled:"GEANNULEERD",
+    abort:"Afbreken", restart:"Opnieuw", rerun:"Opnieuw", show_file:"Bestand tonen", remove:"Verwijderen", show_log:"Log tonen", hide_log:"Log verbergen", inspect:"Inspecteren",
+    converting:"Bezig\u2026", done:"Voltooid",
+    apply_title:"Preset toepassen op wachtende taken?", apply_q:"Je hebt {n} wachtende taken. Op allemaal toepassen, of alleen de {m} geselecteerde?", apply_none:"Geen taken geselecteerd.",
+    apply_all:"Alles ({n})", apply_selected:"Alleen geselecteerd ({n})", cancel:"Annuleren",
+    ed_title_new:"Nieuwe aangepaste template", ed_title_edit:"Template bewerken / dupliceren",
+    ed_name:"Templatenaam", ed_applies:"Geldt voor invoer", ed_outfmt:"Uitvoerformaat", ed_vcodec:"Videocodec", ed_speed:"Encodesnelheid",
+    ed_res:"Resolutie (BxH, leeg = behouden)", ed_crf:"Compressie / CRF (0-51, lager = beter)", ed_fps:"Framerate / FPS (leeg = behouden)",
+    ed_acodec:"Audiocodec", ed_abr:"Audiobitrate (leeg = behouden)", ed_extra:"Extra ffmpeg-args (geavanceerd, optioneel)", ed_inargs:"Invoerargs, voor -i (geavanceerd, bijv. beeldreeksen)",
+    ed_save:"Opslaan als template", ed_anyfmt:"Elk formaat",
+    grp_custom:"Aangepast", new_custom:"+ Nieuwe template", close:"Sluiten"
+  },
+  ja: {
+    editpresets:"presets.json を編集", settings:"設定",
+    sec_bg:"背景", sec_theme:"カラーテーマ", sec_scale:"UI スケール", sec_lang:"言語", zoom:"ズーム",
+    fancy:"リッチな演出", on:"オン", off:"オフ",
+    pat_ambient:"アンビエント", pat_futuristic:"未来的", pat_waves:"波", pat_magic:"魔法", pat_starfield:"星空", pat_aurora:"オーロラ",
+    openpresets:"presets.json を開く", reload:"プリセットを再読み込み",
+    filter_ph:"プリセットを絞り込み（名前・形式・画質）...", fav_only:"お気に入りのみ", compat_only:"対応形式のみ",
+    drop_title:"ここにファイルをドロップ", drop_sub:"動画・音声ファイル \u2014 または「参照」をクリック", browse_files:"ファイルを参照\u2026",
+    output_folder:"出力フォルダー", output_default:"各入力ファイルの隣の output サブフォルダー", browse:"参照\u2026", reset:"リセット",
+    empty_text:"ファイルをドロップしてプリセットを選ぶと開始できます",
+    clear_done:"完了を消去", stop_all:"すべて停止", convert:"変換",
+    no_jobs:"ジョブなし", t_pending:"待機中", t_converting:"変換中", t_done:"完了", t_failed:"失敗",
+    st_pending:"待機中", st_running:"変換中", st_done:"完了", st_error:"エラー", st_cancelled:"キャンセル",
+    abort:"中止", restart:"再実行", rerun:"再実行", show_file:"ファイルを表示", remove:"削除", show_log:"ログを表示", hide_log:"ログを隠す", inspect:"詳細",
+    converting:"変換中\u2026", done:"完了",
+    apply_title:"待機中のジョブにプリセットを適用しますか？", apply_q:"待機中のジョブが {n} 件あります。すべてに適用しますか、それとも選択中の {m} 件のみですか？", apply_none:"選択されたジョブはありません。",
+    apply_all:"すべてに適用 ({n})", apply_selected:"選択のみ ({n})", cancel:"キャンセル",
+    ed_title_new:"新しいカスタムテンプレート", ed_title_edit:"テンプレートを編集／複製",
+    ed_name:"テンプレート名", ed_applies:"対象の入力形式", ed_outfmt:"出力形式", ed_vcodec:"映像コーデック", ed_speed:"エンコード速度",
+    ed_res:"解像度（幅x高さ、空欄=維持）", ed_crf:"圧縮 / CRF（0-51、低いほど高画質）", ed_fps:"フレームレート / FPS（空欄=維持）",
+    ed_acodec:"音声コーデック", ed_abr:"音声ビットレート（空欄=維持）", ed_extra:"追加の ffmpeg 引数（詳細・任意）", ed_inargs:"入力引数（-i の前、詳細、例：連番画像）",
+    ed_save:"カスタムテンプレートとして保存", ed_anyfmt:"すべての形式",
+    grp_custom:"カスタム", new_custom:"＋ 新しいテンプレート", close:"閉じる"
+  },
+  zh: {
+    editpresets:"编辑 presets.json", settings:"设置",
+    sec_bg:"背景", sec_theme:"配色主题", sec_scale:"界面缩放", sec_lang:"语言", zoom:"缩放",
+    fancy:"炫酷特效", on:"开", off:"关",
+    pat_ambient:"氛围", pat_futuristic:"未来感", pat_waves:"波浪", pat_magic:"魔法", pat_starfield:"星空", pat_aurora:"极光",
+    openpresets:"打开 presets.json", reload:"重新加载预设",
+    filter_ph:"筛选预设（名称、格式、质量）...", fav_only:"仅收藏", compat_only:"仅兼容",
+    drop_title:"将文件拖到此处", drop_sub:"视频和音频文件 \u2014 或点击浏览", browse_files:"浏览文件\u2026",
+    output_folder:"输出文件夹", output_default:"每个输入文件旁的 output 子文件夹", browse:"浏览\u2026", reset:"重置",
+    empty_text:"拖入文件并选择预设即可开始",
+    clear_done:"清除已完成", stop_all:"全部停止", convert:"转换",
+    no_jobs:"无任务", t_pending:"待处理", t_converting:"转换中", t_done:"已完成", t_failed:"失败",
+    st_pending:"待处理", st_running:"转换中", st_done:"已完成", st_error:"错误", st_cancelled:"已取消",
+    abort:"中止", restart:"重试", rerun:"重新运行", show_file:"显示文件", remove:"移除", show_log:"显示日志", hide_log:"隐藏日志", inspect:"详情",
+    converting:"转换中\u2026", done:"已完成",
+    apply_title:"将预设应用到待处理任务？", apply_q:"有 {n} 个待处理任务。全部应用，还是仅所选的 {m} 个？", apply_none:"未选择任何任务。",
+    apply_all:"全部应用 ({n})", apply_selected:"仅所选 ({n})", cancel:"取消",
+    ed_title_new:"新建自定义模板", ed_title_edit:"编辑 / 复制模板",
+    ed_name:"模板名称", ed_applies:"适用的输入", ed_outfmt:"输出格式", ed_vcodec:"视频编码", ed_speed:"编码速度",
+    ed_res:"分辨率（宽x高，留空=保持）", ed_crf:"压缩 / CRF（0-51，越低越好）", ed_fps:"帧率 / FPS（留空=保持）",
+    ed_acodec:"音频编码", ed_abr:"音频比特率（留空=保持）", ed_extra:"额外 ffmpeg 参数（高级，可选）", ed_inargs:"输入参数，置于 -i 之前（高级，例如图像序列）",
+    ed_save:"保存为自定义模板", ed_anyfmt:"任意格式",
+    grp_custom:"自定义", new_custom:"+ 新建模板", close:"关闭"
+  },
+  ko: {
+    editpresets:"presets.json 편집", settings:"설정",
+    sec_bg:"배경", sec_theme:"색상 테마", sec_scale:"UI 배율", sec_lang:"언어", zoom:"확대/축소",
+    fancy:"화려한 그래픽", on:"켜짐", off:"꺼짐",
+    pat_ambient:"앰비언트", pat_futuristic:"미래적", pat_waves:"물결", pat_magic:"마법", pat_starfield:"별밭", pat_aurora:"오로라",
+    openpresets:"presets.json 열기", reload:"프리셋 새로고침",
+    filter_ph:"프리셋 필터 (이름, 형식, 품질)...", fav_only:"즐겨찾기만", compat_only:"호환 가능만",
+    drop_title:"여기에 파일을 놓으세요", drop_sub:"동영상 및 오디오 파일 \u2014 또는 찾아보기 클릭", browse_files:"파일 찾아보기\u2026",
+    output_folder:"출력 폴더", output_default:"각 입력 파일 옆의 output 하위 폴더", browse:"찾아보기\u2026", reset:"재설정",
+    empty_text:"파일을 놓고 프리셋을 선택하여 시작하세요",
+    clear_done:"완료 지우기", stop_all:"모두 중지", convert:"변환",
+    no_jobs:"작업 없음", t_pending:"대기 중", t_converting:"변환 중", t_done:"완료", t_failed:"실패",
+    st_pending:"대기 중", st_running:"변환 중", st_done:"완료", st_error:"오류", st_cancelled:"취소됨",
+    abort:"중단", restart:"다시 시작", rerun:"다시 실행", show_file:"파일 표시", remove:"제거", show_log:"로그 표시", hide_log:"로그 숨기기", inspect:"정보",
+    converting:"변환 중\u2026", done:"완료",
+    apply_title:"대기 중인 작업에 프리셋을 적용할까요?", apply_q:"대기 중인 작업이 {n}개 있습니다. 전체에 적용할까요, 아니면 선택한 {m}개에만 적용할까요?", apply_none:"선택된 작업이 없습니다.",
+    apply_all:"전체 적용 ({n})", apply_selected:"선택만 ({n})", cancel:"취소",
+    ed_title_new:"새 사용자 지정 템플릿", ed_title_edit:"템플릿 편집 / 복제",
+    ed_name:"템플릿 이름", ed_applies:"적용 대상 입력", ed_outfmt:"출력 형식", ed_vcodec:"비디오 코덱", ed_speed:"인코딩 속도",
+    ed_res:"해상도 (가로x세로, 비우면 유지)", ed_crf:"압축 / CRF (0-51, 낮을수록 좋음)", ed_fps:"프레임 레이트 / FPS (비우면 유지)",
+    ed_acodec:"오디오 코덱", ed_abr:"오디오 비트레이트 (비우면 유지)", ed_extra:"추가 ffmpeg 인자 (고급, 선택)", ed_inargs:"입력 인자, -i 앞에 배치 (고급, 예: 이미지 시퀀스)",
+    ed_save:"사용자 지정 템플릿으로 저장", ed_anyfmt:"모든 형식",
+    grp_custom:"사용자 지정", new_custom:"+ 새 템플릿", close:"닫기"
+  }
+};
+
+function L(key, n, m) {
+  var d = LANG[currentLang] || LANG.en;
+  var s = (d[key] !== undefined) ? d[key] : (LANG.en[key] !== undefined ? LANG.en[key] : key);
+  if (n !== undefined && n !== null) s = s.replace(/\{n\}/g, n);
+  if (m !== undefined && m !== null) s = s.replace(/\{m\}/g, m);
+  return s;
+}
+
+// Apply the active language to all static UI text, then refresh the dynamic bits.
+function applyLanguage() {
+  function T(id,k){ var e=document.getElementById(id); if(e) e.innerText=L(k); }
+  function H(id,h){ var e=document.getElementById(id); if(e) e.innerHTML=h; }
+  T("btn-editpresets","editpresets");           H("btn-settings","&#9881; "+L("settings"));
+  T("settings-bg-title","sec_bg");               T("settings-title","sec_theme");
+  T("settings-scale-title","sec_scale");         T("settings-lang-title","sec_lang");
+  T("ui-scale-label","zoom");                    T("sp-editbtn","openpresets");
+  H("sp-reloadbtn","&#8635; "+L("reload"));
+  var sb=document.getElementById("search-box"); if(sb) sb.setAttribute("placeholder", L("filter_ph"));
+  H("fav-filter","&#9733; "+L("fav_only"));      H("compat-filter","&#10003; "+L("compat_only"));
+  H("btn-reload","&#8635; "+L("reload"));
+  H("dz-title","&#8659; "+L("drop_title"));      T("dz-sub","drop_sub");   T("dz-browse","browse_files");
+  T("out-label","output_folder");
+  if(!outputFolder){ H("out-path","&mdash; "+L("output_default")+" &mdash;"); }
+  T("btn-pickout","browse");                     H("btn-resetout","&times; "+L("reset"));
+  T("empty-text","empty_text");
+  T("btn-clear","clear_done");                   H("btn-stop","&#9632; "+L("stop_all"));   H("btn-run","&#9654; "+L("convert"));
+  renderLangControls(); renderBgControls(); updateTally(); renderPresets(); renderJobs();
+}
+function renderLangControls() {
+  var t = getT(), codes = ["en","nl","ja","zh","ko"];
+  for (var i=0;i<codes.length;i++){
+    var b=document.getElementById("lang-"+codes[i]); if(!b) continue;
+    var sel=(codes[i]===currentLang);
+    b.style.background="none";
+    b.style.borderColor = sel ? t.ac : t.bordHi;
+    b.style.color       = sel ? t.ac : t.muted;
+  }
+}
+function chooseLang(code) {
+  currentLang = code;
+  applyLanguage();
+  saveSettings();
+}
 var probeQueue = [];   // paths queued for probing
 var probing    = false; // is a probe bat currently running?
+
+// ══ Visual polish: animated themed background + bouncy popups ══════════════
+
+function hexToRgb(h) {
+  h = ("" + h).replace("#", "");
+  if (h.length === 3) h = h.charAt(0)+h.charAt(0)+h.charAt(1)+h.charAt(1)+h.charAt(2)+h.charAt(2);
+  var n = parseInt(h, 16);
+  if (isNaN(n)) return { r: 128, g: 128, b: 128 };
+  return { r: (n>>16)&255, g: (n>>8)&255, b: n&255 };
+}
+// Cross-mode opacity: the standard property plus the IE filter form.
+function setOpacity(el, a) {
+  if (!el) return;
+  if (a < 0) a = 0; if (a > 1) a = 1;
+  el.style.opacity = a;
+  try { el.style.filter = "alpha(opacity=" + Math.round(a*100) + ")"; } catch(e) {}
+}
+// easeOutBack: overshoots past 1 then settles — the "bounce".
+function easeOutBack(t) {
+  var c1 = 1.70158, c3 = c1 + 1;
+  return 1 + c3*Math.pow(t-1, 3) + c1*Math.pow(t-1, 2);
+}
+
+// ── Animated background ──────────────────────────────────
+// Canvas drifting glow if available; a small DOM-particle drift as fallback.
+// Colours come from the active theme (accent + highlight + ok), so it recolours
+// live on theme switch and reads on both dark and light palettes.
+var bgAnim = (function() {
+  var cv=null, ctx=null, timer=null, started=false, enabled=true;
+  var W=980, H=700, pattern="ambient";
+  // The animated canvas spans the whole 980px app, but the left 240px sidebar
+  // is opaque. Centre focal effects in the visible 740px main panel instead
+  // of the full canvas: 240 + (740 / 2) = 610px.
+  var VISUAL_LEFT=240, VISUAL_W=W-VISUAL_LEFT;
+  function visualCenterX(){ return VISUAL_LEFT + VISUAL_W/2; }
+
+  // ═══════════════════════════════════════════════════════════════
+  // FANCY GRAPHICS — EASY TUNING CONTROLS
+  // All defaults below reproduce the current effects. Change only the values.
+  // ═══════════════════════════════════════════════════════════════
+
+  // ── Ambient / drifting glow orbs ─────────────────────────────
+  var AMBIENT_ORB_COUNT=6;
+  var AMBIENT_SPEED_FACTOR_MIN=0.3;
+  var AMBIENT_SPEED_FACTOR_RANGE=1.6;
+  var AMBIENT_RADIUS_MIN=130;
+  var AMBIENT_RADIUS_RANGE=170;
+  var AMBIENT_X_SPEED=0.55;
+  var AMBIENT_Y_SPEED=0.48;
+  var AMBIENT_PULSE_SPEED_MIN=0.0004;
+  var AMBIENT_PULSE_SPEED_RANGE=0.0018;
+  var AMBIENT_ALPHA_LIGHT=0.16;
+  var AMBIENT_ALPHA_DARK=0.13;
+  var AMBIENT_ALPHA_PULSE=0.10;
+  var AMBIENT_SIZE_MIN=0.82;
+  var AMBIENT_SIZE_PULSE=0.18;
+
+  // ── Futuristic / synthwave scene ─────────────────────────────
+  var SCENE_Y_OFFSET=115;              // whole sun + mountains + grid; + = down
+  var FUTURE_HORIZON_Y=0.60;           // fraction of canvas height
+
+  // Sky stars
+  var FUTURE_STAR_COUNT=52;
+  var FUTURE_STAR_SPAWN_HORIZON_Y=0.56;
+  var FUTURE_STAR_SKY_COVERAGE=0.92;
+  var FUTURE_STAR_SPEED_MIN=0.0010;
+  var FUTURE_STAR_SPEED_RANGE=0.0030;
+  var FUTURE_STAR_RADIUS_MIN=0.55;
+  var FUTURE_STAR_RADIUS_RANGE=1.35;
+  var FUTURE_STAR_FLARE_CHANCE=0.22;
+  var FUTURE_STAR_SECOND_SPEED=0.43;
+  var FUTURE_STAR_SECOND_PHASE=1.73;
+  var FUTURE_STAR_PULSE_POWER=3;
+  var FUTURE_STAR_PRIMARY_WEIGHT=0.78;
+  var FUTURE_STAR_SECONDARY_WEIGHT=0.22;
+  var FUTURE_STAR_ALPHA_MIN=0.12;
+  var FUTURE_STAR_ALPHA_RANGE=0.88;
+  var FUTURE_STAR_ALPHA_LIGHT=0.48;
+  var FUTURE_STAR_ALPHA_DARK=0.95;
+  var FUTURE_STAR_SIZE_MIN=0.72;
+  var FUTURE_STAR_SIZE_PULSE=0.72;
+  var FUTURE_STAR_FLARE_THRESHOLD=0.72;
+  var FUTURE_STAR_FLARE_ALPHA_LIGHT=0.28;
+  var FUTURE_STAR_FLARE_ALPHA_DARK=0.52;
+  var FUTURE_STAR_FLARE_BASE_SIZE=2.0;
+  var FUTURE_STAR_FLARE_SIZE_SCALE=2.2;
+  var FUTURE_STAR_FLARE_LINE_WIDTH=0.7;
+
+  // Sun
+  var SUN_RADIUS=150;
+  var SUN_Y_FROM_HORIZON=-84;
+  var SUN_CLIP_FROM_HORIZON=-2;
+  var SUN_GRADIENT_TOP_ALPHA=0.95;
+  var SUN_GRADIENT_MID_ALPHA=0.90;
+  var SUN_GRADIENT_BOTTOM_ALPHA=0.72;
+  // Bloom halo around the sun. 0 strength disables it; larger size extends it farther.
+  var SUN_BLOOM_STRENGTH=0.28;
+  var SUN_BLOOM_SIZE=1.55;
+  var SUN_BLOOM_INNER_RADIUS=0.72;       // fraction of sun radius where the halo begins
+  var SUN_BLOOM_FALLOFF=0.46;           // 0..1 position of the middle fade stop
+  var SUN_GAP_COUNT=6;
+  var SUN_GAP_SPEED=1.0;
+  var SUN_GAP_START_OFFSET=8;
+  var SUN_GAP_SCROLL_RATE=0.0135;
+  var SUN_GAP_MIN_THICKNESS=1.15;
+  var SUN_GAP_MAX_THICKNESS=7.2;
+  var SUN_GAP_MAX_SPACING_RATIO=0.60;
+  var SUN_GAP_THICKNESS_CURVE=1.45;
+
+  // Floor grid
+  var GRID_PERSPECTIVE=2.16;            // larger = stronger foreground fan
+  var GRID_COLUMNS=18;
+  var GRID_HORIZON_SPREAD=0.385;
+  var GRID_VERTICAL_ALPHA=0.16;
+  var GRID_VERTICAL_CENTER_BOOST=0.09;
+  var GRID_ROWS=18;
+  var GRID_SCROLL_SPEED=0.00022;
+  var GRID_DEPTH_POWER=2.35;
+  var GRID_HORIZONTAL_ALPHA=0.06;
+  var GRID_HORIZONTAL_ALPHA_RANGE=0.27;
+  var GRID_HORIZON_ALPHA=0.68;
+  var GRID_HORIZON_LINE_WIDTH=2;
+
+  // Mountains — global
+  var MOUNTAIN_SPEED=4.0;
+  var MOUNTAIN_CENTER_GAP=148;
+  var MOUNTAIN_DRIFT_SPEED=0.000065;
+  var MOUNTAIN_DRIFT_AMOUNT=1.25;
+
+  // Rear mountain layer
+  var REAR_MOUNTAIN_BASE_START=4;
+  var REAR_MOUNTAIN_BASE_DROP=34;
+  var REAR_MOUNTAIN_BASE_POWER=1.28;
+  var REAR_MOUNTAIN_DRIFT_NEAR=0.15;
+  var REAR_MOUNTAIN_DRIFT_FAR=0.85;
+  var REAR_MOUNTAIN_PHASE_STEP=1.31;
+  var REAR_MOUNTAIN_PHASE_LEFT=0.15;
+  var REAR_MOUNTAIN_PHASE_RIGHT=0.97;
+  var REAR_MOUNTAIN_HEIGHT_NORMALIZER=190;
+  var REAR_MOUNTAIN_WAVE1_SPEED=0.00048;
+  var REAR_MOUNTAIN_WAVE2_SPEED=0.00021;
+  var REAR_MOUNTAIN_WAVE1_BASE=2.0;
+  var REAR_MOUNTAIN_WAVE1_HEIGHT=8.5;
+  var REAR_MOUNTAIN_WAVE2_BASE=0.8;
+  var REAR_MOUNTAIN_WAVE2_HEIGHT=2.8;
+  var REAR_MOUNTAIN_WAVE2_PHASE=0.57;
+  var REAR_MOUNTAIN_CENTER_MOTION=0.18;
+  var REAR_MOUNTAIN_OUTER_MOTION=0.82;
+  var REAR_MOUNTAIN_MOTION_RAMP=2.4;
+  var REAR_MOUNTAIN_JITTER=1.8;
+  var REAR_MOUNTAIN_MID_BLEND=0.50;
+  var REAR_MOUNTAIN_MID_VARIATION=0.045;
+  var REAR_MOUNTAIN_MID_MOTION=0.34;
+  var REAR_MOUNTAIN_FILL_LIGHT=0.025;
+  var REAR_MOUNTAIN_FILL_DARK=0.045;
+  var REAR_MOUNTAIN_HIGHLIGHT_THRESHOLD=0.55;
+  var REAR_MOUNTAIN_OUTLINE_LIGHT=0.36;
+  var REAR_MOUNTAIN_OUTLINE_DARK=0.52;
+  var REAR_MOUNTAIN_OUTLINE_HEIGHT_BOOST=0.18;
+  var REAR_MOUNTAIN_BOLD_THRESHOLD=0.72;
+  var REAR_MOUNTAIN_BOLD_WIDTH=1.45;
+  var REAR_MOUNTAIN_NORMAL_WIDTH=1.15;
+  var REAR_MOUNTAIN_RIDGE_LIGHT=0.22;
+  var REAR_MOUNTAIN_RIDGE_DARK=0.34;
+  var REAR_MOUNTAIN_RIDGE_DEPTH_BOOST=0.10;
+  var REAR_MOUNTAIN_FACET_LIGHT=0.20;
+  var REAR_MOUNTAIN_FACET_DARK=0.31;
+  var REAR_MOUNTAIN_FACET_DEPTH_BOOST=0.10;
+  var REAR_MOUNTAIN_DIAGONAL_ALPHA=0.82;
+
+  // Foreground mountain layer
+  var FRONT_MOUNTAIN_INNER_OFFSET=-2;
+  var FRONT_MOUNTAIN_EXTRA_WIDTH=18;
+  var FRONT_MOUNTAIN_BASE_START=2;
+  var FRONT_MOUNTAIN_BASE_DROP=98;
+  var FRONT_MOUNTAIN_HEIGHT_NORMALIZER=122;
+  var FRONT_MOUNTAIN_PHASE_STEP=1.09;
+  var FRONT_MOUNTAIN_PHASE_LEFT=0.42;
+  var FRONT_MOUNTAIN_PHASE_RIGHT=1.31;
+  var FRONT_MOUNTAIN_WAVE1_SPEED=0.00051;
+  var FRONT_MOUNTAIN_WAVE2_SPEED=0.00023;
+  var FRONT_MOUNTAIN_WAVE1_BASE=1.0;
+  var FRONT_MOUNTAIN_WAVE1_HEIGHT=5.4;
+  var FRONT_MOUNTAIN_WAVE2_BASE=0.5;
+  var FRONT_MOUNTAIN_WAVE2_HEIGHT=2.2;
+  var FRONT_MOUNTAIN_WAVE2_PHASE=0.63;
+  var FRONT_MOUNTAIN_CENTER_MOTION=0.20;
+  var FRONT_MOUNTAIN_OUTER_MOTION=0.80;
+  var FRONT_MOUNTAIN_MOTION_RAMP=2.6;
+  var FRONT_MOUNTAIN_JITTER=2.1;
+  var FRONT_MOUNTAIN_MID_BLEND=0.52;
+  var FRONT_MOUNTAIN_MID_VARIATION=0.025;
+  var FRONT_MOUNTAIN_MID_MOTION=0.18;
+  var FRONT_MOUNTAIN_MID_HEIGHT=0.52;
+  var FRONT_MOUNTAIN_FILL_LIGHT=0.025;
+  var FRONT_MOUNTAIN_FILL_DARK=0.050;
+  var FRONT_MOUNTAIN_OUTLINE_WIDTH=1.2;
+  var FRONT_MOUNTAIN_HIGHLIGHT_THRESHOLD=0.68;
+  var FRONT_MOUNTAIN_OUTLINE_LIGHT=0.37;
+  var FRONT_MOUNTAIN_OUTLINE_DARK=0.56;
+  var FRONT_MOUNTAIN_OUTLINE_DEPTH_BOOST=0.10;
+  var FRONT_MOUNTAIN_RIDGE_LIGHT=0.22;
+  var FRONT_MOUNTAIN_RIDGE_DARK=0.34;
+  var FRONT_MOUNTAIN_RIDGE_DEPTH_BOOST=0.09;
+  var FRONT_MOUNTAIN_FACET_LIGHT=0.19;
+  var FRONT_MOUNTAIN_FACET_DARK=0.30;
+  var FRONT_MOUNTAIN_FACET_DEPTH_BOOST=0.08;
+  var FRONT_MOUNTAIN_DIAGONAL_ALPHA=0.72;
+  var FRONT_MOUNTAIN_BASE_LIGHT=0.16;
+  var FRONT_MOUNTAIN_BASE_DARK=0.25;
+  var FRONT_MOUNTAIN_BASE_WIDTH=0.8;
+
+  // ── Waves ──────────────────────────────────────────────────
+  var WAVES_LAYER_COUNT=4;
+  var WAVES_AMPLITUDE_START=26;
+  var WAVES_AMPLITUDE_STEP=10;
+  var WAVES_WAVELENGTH_START=260;
+  var WAVES_WAVELENGTH_STEP=80;
+  var WAVES_SPEED_MIN=0.00028;
+  var WAVES_SPEED_RANGE=0.00085;
+  var WAVES_REVERSE_CHANCE=0.35;
+  var WAVES_Y_START=0.52;
+  var WAVES_Y_STEP=0.13;
+  var WAVES_X_STEP=18;
+  var WAVES_ALPHA_LIGHT=0.13;
+  var WAVES_ALPHA_DARK=0.10;
+
+  // ── Magic particles ────────────────────────────────────────
+  var MAGIC_PARTICLE_COUNT=50;
+  var MAGIC_BIG_CHANCE=0.18;
+  var MAGIC_RISE_SPEED_MIN=0.25;
+  var MAGIC_RISE_SPEED_RANGE=0.55;
+  var MAGIC_BIG_SPEED_BONUS=0.15;
+  var MAGIC_SWAY_AMOUNT_MIN=8;
+  var MAGIC_SWAY_AMOUNT_RANGE=12;
+  var MAGIC_SWAY_SPEED_MIN=0.010;
+  var MAGIC_SWAY_SPEED_RANGE=0.020;
+  var MAGIC_TWINKLE_SPEED_MIN=0.030;
+  var MAGIC_TWINKLE_SPEED_RANGE=0.050;
+  var MAGIC_GLOW_BIG_MIN=26;
+  var MAGIC_GLOW_BIG_RANGE=14;
+  var MAGIC_GLOW_SMALL_MIN=12;
+  var MAGIC_GLOW_SMALL_RANGE=10;
+  var MAGIC_CORE_BIG=1.6;
+  var MAGIC_CORE_SMALL=0.9;
+  var MAGIC_CORE_RANGE=0.8;
+  var MAGIC_SPRITE_SIZE=48;
+  var MAGIC_GLOW_WHITE_ALPHA=0.95;
+  var MAGIC_GLOW_MIDPOINT=0.28;
+  var MAGIC_GLOW_COLOR_ALPHA=0.72;
+  var MAGIC_RESET_MARGIN=20;
+  var MAGIC_ALPHA_LIGHT=0.50;
+  var MAGIC_ALPHA_DARK=0.85;
+  var MAGIC_ALPHA_MIN=0.35;
+  var MAGIC_ALPHA_RANGE=1.65;
+  var MAGIC_TRAIL_LENGTH=40;             // visible history points per particle; 0 = no trail
+  var MAGIC_TRAIL_RADIUS_MIN=0.35;
+  var MAGIC_TRAIL_RADIUS_RANGE=1.70;
+  var MAGIC_TRAIL_ALPHA=0.55;
+  var MAGIC_SPRITE_SCALE_MIN=0.85;
+  var MAGIC_SPRITE_SCALE_RANGE=0.30;
+  var MAGIC_CORE_ALPHA=0.90;
+
+  // ── Starfield / warp ──────────────────────────────────────
+  var STARFIELD_Y_OFFSET=115;            // + = lower focal point
+  var STARFIELD_STAR_COUNT=150;
+  var STARFIELD_RADIUS_MIN=6;
+  var STARFIELD_RADIUS_RANGE=20;
+  var STARFIELD_SPEED_MIN=0.5;
+  var STARFIELD_SPEED_RANGE=1.6;
+  var STARFIELD_ACCENT_CHANCE=0.22;
+  var STARFIELD_SIZE_MIN=0.6;
+  var STARFIELD_SIZE_RANGE=1.5;
+  var STARFIELD_ACCELERATION=0.010;
+  var STARFIELD_ALPHA_BASE=0.15;
+  var STARFIELD_ALPHA_LIGHT=0.70;
+  var STARFIELD_ALPHA_DARK=0.90;
+  var STARFIELD_LINE_MIN_WIDTH=0.5;
+  var STARFIELD_LINE_WIDTH_SCALE=2.7;
+  var STARFIELD_RESET_MARGIN=20;
+  var STARFIELD_RESET_RADIUS_MIN=5;
+  var STARFIELD_RESET_RADIUS_RANGE=18;
+
+  // ── Aurora ─────────────────────────────────────────────────
+  var AURORA_RIBBON_COUNT=4;
+  var AURORA_Y_START=0.22;
+  var AURORA_Y_STEP=0.17;
+  var AURORA_AMPLITUDE_START=32;
+  var AURORA_AMPLITUDE_STEP=8;
+  var AURORA_WAVELENGTH_START=420;
+  var AURORA_WAVELENGTH_STEP=90;
+  var AURORA_SPEED_START=0.00035;
+  var AURORA_SPEED_STEP=0.00007;
+  var AURORA_THICKNESS_START=66;
+  var AURORA_THICKNESS_STEP=14;
+  var AURORA_X_STEP=22;
+  var AURORA_BACK_PHASE=0.6;
+  var AURORA_ALPHA_LIGHT=0.15;
+  var AURORA_ALPHA_DARK=0.12;
+
+  // Hand-authored low-poly mountain banks. 
+  // Heights increase toward the outer edges, while the centre valley stays clear.
+  var customMountainLeft={
+    t:[0,0.07,0.15,0.24,0.34,0.44,0.55,0.66,0.77,0.87,0.94,1],
+    h:[7,18,12,42,31,72,54,104,82,138,115,176],
+    j:[0,1,-2,2,-1,3,-2,2,-3,2,-1,0]
+  };
+  var customMountainRight={
+    t:[0,0.08,0.17,0.26,0.36,0.47,0.58,0.69,0.79,0.88,0.95,1],
+    h:[6,14,25,20,53,39,80,64,116,92,150,188],
+    j:[0,-1,2,-2,1,-3,2,-1,3,-2,1,0]
+  };
+
+  var pal=null, bgHex="#141414", bgRgb={r:20,g:20,b:20}, isLight=false;
+  var st=null;                     // per-pattern particle state
+  var domLayer=null, domDots=null; // fallback layer (no canvas)
+  var colorVer=0;                  // bumps on theme change (invalidates sprites)
+
+  function lum(c){ return (0.299*c.r + 0.587*c.g + 0.114*c.b)/255; }
+  function palFrom(t){ var p=[t.ac, t.starOn||t.ac, t.ok||t.ac], o=[]; for(var i=0;i<p.length;i++) o.push(hexToRgb(p[i])); return o; }
+  function rgba(c,a){ return "rgba("+c.r+","+c.g+","+c.b+","+a+")"; }
+  function pick(i){ return pal[i % pal.length]; }
+  function fillBg(){ ctx.globalAlpha=1; ctx.fillStyle=bgHex; ctx.fillRect(0,0,W,H); }
+
+  function setColors(t){
+    bgHex = t.bg || "#141414";
+    bgRgb = hexToRgb(bgHex);
+    isLight = lum(bgRgb) > 0.5;
+    pal = palFrom(t);
+    colorVer++;
+    if (domDots) recolorDom();
+  }
+
+  // ── per-pattern init ──
+  function initPattern(){
+    st = {}; var i;
+    if (pattern==="ambient") {
+      st.o=[]; for(i=0;i<AMBIENT_ORB_COUNT;i++){ var sf=AMBIENT_SPEED_FACTOR_MIN+Math.random()*AMBIENT_SPEED_FACTOR_RANGE;   // per-orb speed factor
+        st.o.push({x:Math.random()*W,y:Math.random()*H,r:AMBIENT_RADIUS_MIN+Math.random()*AMBIENT_RADIUS_RANGE,
+          vx:(Math.random()-0.5)*AMBIENT_X_SPEED*sf,vy:(Math.random()-0.5)*AMBIENT_Y_SPEED*sf,
+          ci:i,ph:Math.random()*6.283,sp:AMBIENT_PULSE_SPEED_MIN+Math.random()*AMBIENT_PULSE_SPEED_RANGE}); }
+    } else if (pattern==="constellation") {
+      var hz1=H*FUTURE_STAR_SPAWN_HORIZON_Y;
+      // Time-based twinkle so stars pulse consistently regardless of frame rate.
+      // A few larger stars get a tiny cross-flare at the top of their pulse.
+      st.stars=[];
+      for(i=0;i<FUTURE_STAR_COUNT;i++) st.stars.push({
+        x:Math.random()*W,
+        y:Math.random()*hz1*FUTURE_STAR_SKY_COVERAGE,
+        ph:Math.random()*6.283,
+        sp:FUTURE_STAR_SPEED_MIN+Math.random()*FUTURE_STAR_SPEED_RANGE,
+        r:FUTURE_STAR_RADIUS_MIN+Math.random()*FUTURE_STAR_RADIUS_RANGE,
+        flare:Math.random()<FUTURE_STAR_FLARE_CHANCE
+      });
+    } else if (pattern==="waves") {
+      st.l=[]; for(i=0;i<WAVES_LAYER_COUNT;i++) st.l.push({amp:WAVES_AMPLITUDE_START+i*WAVES_AMPLITUDE_STEP,wl:WAVES_WAVELENGTH_START+i*WAVES_WAVELENGTH_STEP,sp:(WAVES_SPEED_MIN+Math.random()*WAVES_SPEED_RANGE)*(Math.random()<WAVES_REVERSE_CHANCE?-1:1),yb:H*(WAVES_Y_START+i*WAVES_Y_STEP),ci:i,ph:Math.random()*6.283});
+    } else if (pattern==="magic") {
+      st.p=[];
+      for(i=0;i<MAGIC_PARTICLE_COUNT;i++){ var big=Math.random()<MAGIC_BIG_CHANCE;
+        st.p.push({x:Math.random()*W,y:Math.random()*H,vy:MAGIC_RISE_SPEED_MIN+Math.random()*MAGIC_RISE_SPEED_RANGE+(big?MAGIC_BIG_SPEED_BONUS:0),
+          amp:MAGIC_SWAY_AMOUNT_MIN+Math.random()*MAGIC_SWAY_AMOUNT_RANGE,sw:Math.random()*6.283,ss:MAGIC_SWAY_SPEED_MIN+Math.random()*MAGIC_SWAY_SPEED_RANGE,
+          tw:Math.random()*6.283,tsp:MAGIC_TWINKLE_SPEED_MIN+Math.random()*MAGIC_TWINKLE_SPEED_RANGE,
+          gs:(big?MAGIC_GLOW_BIG_MIN+Math.random()*MAGIC_GLOW_BIG_RANGE:MAGIC_GLOW_SMALL_MIN+Math.random()*MAGIC_GLOW_SMALL_RANGE),core:(big?MAGIC_CORE_BIG:MAGIC_CORE_SMALL)+Math.random()*MAGIC_CORE_RANGE,ci:i,trail:[]}); }
+      st.spriteVer=-1;
+    } else if (pattern==="starfield") {
+      st.s=[]; for(i=0;i<STARFIELD_STAR_COUNT;i++) st.s.push({a:Math.random()*6.283,rad:Math.random()*STARFIELD_RADIUS_RANGE+STARFIELD_RADIUS_MIN,sp:STARFIELD_SPEED_MIN+Math.random()*STARFIELD_SPEED_RANGE,ci:(Math.random()<STARFIELD_ACCENT_CHANCE?0:1),sz:STARFIELD_SIZE_MIN+Math.random()*STARFIELD_SIZE_RANGE});
+    } else if (pattern==="aurora") {
+      st.r=[]; for(i=0;i<AURORA_RIBBON_COUNT;i++) st.r.push({yb:H*(AURORA_Y_START+i*AURORA_Y_STEP),amp:AURORA_AMPLITUDE_START+i*AURORA_AMPLITUDE_STEP,wl:AURORA_WAVELENGTH_START+i*AURORA_WAVELENGTH_STEP,sp:AURORA_SPEED_START+i*AURORA_SPEED_STEP,th:AURORA_THICKNESS_START+i*AURORA_THICKNESS_STEP,ci:i,ph:Math.random()*6.283});
+    }
+  }
+
+  // ── per-pattern draw ──
+  function drawAmbient(now){
+    fillBg();
+    for(var i=0;i<st.o.length;i++){ var o=st.o[i]; o.x+=o.vx;o.y+=o.vy;
+      if(o.x<-o.r)o.x=W+o.r; else if(o.x>W+o.r)o.x=-o.r;
+      if(o.y<-o.r)o.y=H+o.r; else if(o.y>H+o.r)o.y=-o.r;
+      var pu=0.5+0.5*Math.sin(now*o.sp+o.ph), a=(isLight?AMBIENT_ALPHA_LIGHT:AMBIENT_ALPHA_DARK)+AMBIENT_ALPHA_PULSE*pu, rr=o.r*(AMBIENT_SIZE_MIN+AMBIENT_SIZE_PULSE*pu);
+      var g=ctx.createRadialGradient(o.x,o.y,0,o.x,o.y,rr), c=pick(o.ci);
+      g.addColorStop(0,rgba(c,a)); g.addColorStop(1,rgba(c,0));
+      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(o.x,o.y,rr,0,6.2832,false); ctx.fill(); }
+  }
+  function drawConstellation(now){
+    fillBg();
+    var hz=Math.round(H*FUTURE_HORIZON_Y), ac=pick(0), hl=pick(1), i, k;
+
+    // Clearly visible, asynchronous twinkling. Brightness and apparent size pulse
+    // independently; selected stars briefly form a tiny four-point sparkle.
+    for(i=0;i<st.stars.length;i++){
+      var s=st.stars[i];
+      var tw=0.5+0.5*Math.sin(now*s.sp+s.ph);
+      var tw2=0.5+0.5*Math.sin(now*s.sp*FUTURE_STAR_SECOND_SPEED+s.ph*FUTURE_STAR_SECOND_PHASE);
+      var pulse=Math.pow(tw,FUTURE_STAR_PULSE_POWER)*FUTURE_STAR_PRIMARY_WEIGHT+tw2*FUTURE_STAR_SECONDARY_WEIGHT;
+      var a=(FUTURE_STAR_ALPHA_MIN+FUTURE_STAR_ALPHA_RANGE*pulse)*(isLight?FUTURE_STAR_ALPHA_LIGHT:FUTURE_STAR_ALPHA_DARK);
+      var rr=s.r*(FUTURE_STAR_SIZE_MIN+FUTURE_STAR_SIZE_PULSE*pulse);
+      ctx.fillStyle=rgba(hl,a);
+      ctx.beginPath(); ctx.arc(s.x,s.y,rr,0,6.2832,false); ctx.fill();
+
+      if(s.flare && pulse>FUTURE_STAR_FLARE_THRESHOLD){
+        var fa=(pulse-FUTURE_STAR_FLARE_THRESHOLD)/(1-FUTURE_STAR_FLARE_THRESHOLD)*(isLight?FUTURE_STAR_FLARE_ALPHA_LIGHT:FUTURE_STAR_FLARE_ALPHA_DARK);
+        var fl=FUTURE_STAR_FLARE_BASE_SIZE+s.r*FUTURE_STAR_FLARE_SIZE_SCALE*pulse;
+        ctx.strokeStyle=rgba(hl,fa);
+        ctx.lineWidth=FUTURE_STAR_FLARE_LINE_WIDTH;
+        ctx.beginPath();
+        ctx.moveTo(s.x-fl,s.y); ctx.lineTo(s.x+fl,s.y);
+        ctx.moveTo(s.x,s.y-fl); ctx.lineTo(s.x,s.y+fl);
+        ctx.stroke();
+        ctx.lineWidth=1;
+      }
+    }
+
+    // Move the complete foreground scene down as ONE rigid unit. Stars deliberately
+    // stay in sky-space so lowering the scene reveals more starry sky above it.
+    ctx.save();
+    ctx.translate(0,SCENE_Y_OFFSET);
+
+    // Outrun sun, kept centred in the visible main panel.
+    var sunR=SUN_RADIUS, sx=visualCenterX(), sy=hz+SUN_Y_FROM_HORIZON, yClip=hz+SUN_CLIP_FROM_HORIZON;
+    ctx.save();
+    ctx.beginPath(); ctx.rect(0,0,W,yClip); ctx.clip();
+
+    // Soft sky-side bloom behind the sun. It is drawn before the disc and clipped at
+    // the horizon, so the glow never washes over the floor grid.
+    if(SUN_BLOOM_STRENGTH>0 && SUN_BLOOM_SIZE>1){
+      var bloomR=sunR*SUN_BLOOM_SIZE;
+      var bloomInner=sunR*Math.max(0,Math.min(1,SUN_BLOOM_INNER_RADIUS));
+      var bloomMid=Math.max(0.01,Math.min(0.99,SUN_BLOOM_FALLOFF));
+      var bloom=ctx.createRadialGradient(sx,sy,bloomInner,sx,sy,bloomR);
+      bloom.addColorStop(0,rgba(hl,SUN_BLOOM_STRENGTH));
+      bloom.addColorStop(bloomMid,rgba(ac,SUN_BLOOM_STRENGTH*0.34));
+      bloom.addColorStop(1,rgba(ac,0));
+      ctx.fillStyle=bloom;
+      ctx.fillRect(sx-bloomR,sy-bloomR,bloomR*2,bloomR*2);
+    }
+
+    var sg=ctx.createLinearGradient(0,sy-sunR,0,sy+sunR);
+    sg.addColorStop(0,rgba(hl,SUN_GRADIENT_TOP_ALPHA));
+    sg.addColorStop(0.5,rgba(ac,SUN_GRADIENT_MID_ALPHA));
+    sg.addColorStop(1,rgba(ac,SUN_GRADIENT_BOTTOM_ALPHA));
+    ctx.fillStyle=sg; ctx.beginPath(); ctx.arc(sx,sy,sunR,0,6.2832,false); ctx.fill();
+    ctx.fillStyle=bgHex;
+    // Smooth synthwave sun-gap conveyor. Instead of teleporting one gap from the
+    // top back to the bottom, an infinite evenly-spaced sequence scrolls upward.
+    // A thick gap enters gradually from BELOW the clipped sun while a thin gap
+    // exits above the striped section, so there is no visible wrap/shock.
+    var gapCount=Math.max(2,Math.round(SUN_GAP_COUNT));
+    var gapTop=sy+SUN_GAP_START_OFFSET;
+    var gapVisibleBottom=yClip;
+    var gapRange=gapVisibleBottom-gapTop;
+    var gapSpacing=gapRange/gapCount;
+    var gapShift=(now*SUN_GAP_SPEED*SUN_GAP_SCROLL_RATE)%gapSpacing;
+
+    // Restrict the moving cut-outs to the sun silhouette AND its lower striped area.
+    // The circle clip is important: without it, the dark gap rectangles can protrude
+    // beyond the curved sides of the sun, especially near the lower edge.
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(sx,sy,sunR,0,6.2832,false);
+    ctx.clip();
+    ctx.beginPath();
+    ctx.rect(sx-sunR-2,gapTop,sunR*2+4,gapVisibleBottom-gapTop+1);
+    ctx.clip();
+
+    // Start one whole spacing below the visible bottom. That hidden incoming gap
+    // moves into view smoothly, which also prevents a large solid slab appearing
+    // beneath the lowest visible gap when SUN_GAP_COUNT is small (e.g. 6).
+    var virtualBottom=gapVisibleBottom+gapSpacing;
+    for(k=0;k<gapCount+3;k++){
+      var by=virtualBottom-k*gapSpacing-gapShift;
+      if(by<gapTop-gapSpacing || by>virtualBottom+1) continue;
+
+      // Thickness is determined by vertical position: broad at the bottom, fine
+      // near the top. Because position itself is continuous, thickness is too.
+      var p=(by-gapTop)/gapRange;
+      if(p<0) p=0; else if(p>1) p=1;
+      var minBh=SUN_GAP_MIN_THICKNESS;
+      var maxBh=Math.min(SUN_GAP_MAX_THICKNESS,gapSpacing*SUN_GAP_MAX_SPACING_RATIO);
+      var bh=minBh+(maxBh-minBh)*Math.pow(p,SUN_GAP_THICKNESS_CURVE);
+      ctx.fillRect(sx-sunR,by-bh*0.5,sunR*2,bh);
+    }
+    ctx.restore();
+    ctx.restore();
+
+    // Wide synthwave floor. GRID_PERSPECTIVE is the one value to tweak:
+    // 1.75 = previous look; larger values fan the foreground lines outward more.
+    // The horizon width is kept fixed, so perspective increases without collapsing
+    // the grid back into a needle-point vanishing point.
+    ctx.lineWidth=1;
+    var cols=GRID_COLUMNS;
+    for(k=0;k<=cols;k++){
+      var fx=(k/cols-0.5), xB=sx+fx*W*GRID_PERSPECTIVE;
+      var xH=sx+fx*W*GRID_HORIZON_SPREAD; // broad horizon spacing
+      var edge=Math.abs(fx)*2, va=GRID_VERTICAL_ALPHA+GRID_VERTICAL_CENTER_BOOST*(1-edge);
+      ctx.strokeStyle=rgba(ac,va);
+      ctx.beginPath(); ctx.moveTo(xH,hz); ctx.lineTo(xB,H); ctx.stroke();
+    }
+    var rows=GRID_ROWS, scroll=(now*GRID_SCROLL_SPEED)%1;
+    for(k=0;k<rows;k++){
+      var t=((k/rows)+scroll)%1;
+      var yy=hz+(H-hz)*Math.pow(t,GRID_DEPTH_POWER), a2=GRID_HORIZONTAL_ALPHA+GRID_HORIZONTAL_ALPHA_RANGE*t;
+      ctx.strokeStyle=rgba(ac,a2);
+      ctx.beginPath(); ctx.moveTo(0,yy); ctx.lineTo(W,yy); ctx.stroke();
+    }
+
+    // Horizon sits behind the scenery, so mountain silhouettes mask it naturally.
+    ctx.strokeStyle=rgba(hl,GRID_HORIZON_ALPHA); ctx.lineWidth=GRID_HORIZON_LINE_WIDTH;
+    ctx.beginPath(); ctx.moveTo(0,hz); ctx.lineTo(W,hz); ctx.stroke();
+    ctx.lineWidth=1;
+
+    // One continuous hand-built mountain bank per side. No duplicated meshes and
+    // no interpenetrating copies: the centre valley remains completely clear.
+    drawMountainBanks(now,hz,sx,ac,hl);
+
+    // End rigid vertical scene translation.
+    ctx.restore();
+  }
+
+  // Build one continuous faceted bank from a hand-authored silhouette. Because each
+  // side is a single mesh strip, there are no overlapping mountain instances.
+  function buildCustomBank(profile,side,hz,sx,drift,now){
+    var gap=MOUNTAIN_CENTER_GAP;
+    var inner=sx+side*gap;
+    var outer=(side<0?VISUAL_LEFT:W);
+    var span=Math.abs(outer-inner);
+    var sil=[],mid=[],base=[],i;
+    for(i=0;i<profile.t.length;i++){
+      var t=profile.t[i];
+      var x=inner+side*t*span + side*drift*(REAR_MOUNTAIN_DRIFT_NEAR+REAR_MOUNTAIN_DRIFT_FAR*t);
+      var baseDrop=REAR_MOUNTAIN_BASE_START+REAR_MOUNTAIN_BASE_DROP*Math.pow(t,REAR_MOUNTAIN_BASE_POWER);
+      var by=hz+baseDrop;
+
+      // Keep the mountain planted at the base, but visibly animate the REAL
+      // skyline vertices. Tall peaks get the most travel; low foothills barely
+      // move. Two slow waves with different phases prevent synchronized bobbing.
+      var phase=i*REAR_MOUNTAIN_PHASE_STEP + (side<0?REAR_MOUNTAIN_PHASE_LEFT:REAR_MOUNTAIN_PHASE_RIGHT);
+      var peakFactor=profile.h[i]/REAR_MOUNTAIN_HEIGHT_NORMALIZER;
+      if(peakFactor>1) peakFactor=1;
+      var motion=Math.sin(now*MOUNTAIN_SPEED*REAR_MOUNTAIN_WAVE1_SPEED+phase)*(REAR_MOUNTAIN_WAVE1_BASE+REAR_MOUNTAIN_WAVE1_HEIGHT*peakFactor);
+      motion+=Math.sin(now*MOUNTAIN_SPEED*REAR_MOUNTAIN_WAVE2_SPEED+phase*REAR_MOUNTAIN_WAVE2_PHASE)*(REAR_MOUNTAIN_WAVE2_BASE+REAR_MOUNTAIN_WAVE2_HEIGHT*peakFactor);
+      // The tiny centre foothill stays almost pinned so the valley opening is stable.
+      motion*=REAR_MOUNTAIN_CENTER_MOTION+REAR_MOUNTAIN_OUTER_MOTION*Math.min(1,t*REAR_MOUNTAIN_MOTION_RAMP);
+      var sy=by-profile.h[i]-motion;
+      var mx=x+side*profile.j[i]*REAR_MOUNTAIN_JITTER;
+      var blend=REAR_MOUNTAIN_MID_BLEND + ((i%3)-1)*REAR_MOUNTAIN_MID_VARIATION;
+      // Interior ridge follows the skyline motion, but less strongly, so facets flex.
+      var my=sy+(by-sy)*blend-motion*REAR_MOUNTAIN_MID_MOTION;
+      sil.push({x:x,y:sy,h:profile.h[i],t:t});
+      mid.push({x:mx,y:my,h:profile.h[i]*0.5,t:t});
+      base.push({x:x,y:by,h:0,t:t});
+    }
+    return {sil:sil,mid:mid,base:base};
+  }
+
+  function drawCustomBank(profile,side,hz,sx,ac,hl,drift,now){
+    var b=buildCustomBank(profile,side,hz,sx,drift,now);
+    var sil=b.sil, mid=b.mid, base=b.base, i, a, c;
+
+    // Solid dark body masks the moving grid beneath the mountains, then a faint
+    // themed wash prevents it from reading as a flat black cutout.
+    ctx.beginPath();
+    ctx.moveTo(sil[0].x,sil[0].y);
+    for(i=1;i<sil.length;i++) ctx.lineTo(sil[i].x,sil[i].y);
+    for(i=base.length-1;i>=0;i--) ctx.lineTo(base[i].x,base[i].y);
+    ctx.closePath();
+    ctx.fillStyle=bgHex; ctx.fill();
+    ctx.fillStyle=rgba(ac,isLight?REAR_MOUNTAIN_FILL_LIGHT:REAR_MOUNTAIN_FILL_DARK); ctx.fill();
+
+    // Outer silhouette: the complete crest uses the secondary/highlight theme color.
+    for(i=0;i<sil.length-1;i++){
+      a=sil[i]; c=sil[i+1];
+      var peak=Math.max(a.h,c.h)/REAR_MOUNTAIN_HEIGHT_NORMALIZER;
+      ctx.strokeStyle=rgba(hl,(isLight?REAR_MOUNTAIN_OUTLINE_LIGHT:REAR_MOUNTAIN_OUTLINE_DARK)+peak*REAR_MOUNTAIN_OUTLINE_HEIGHT_BOOST);
+      ctx.lineWidth=peak>REAR_MOUNTAIN_BOLD_THRESHOLD?REAR_MOUNTAIN_BOLD_WIDTH:REAR_MOUNTAIN_NORMAL_WIDTH;
+      ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(c.x,c.y); ctx.stroke();
+    }
+
+    // Faceted interior: one mid-ridge strip plus alternating diagonals. This gives
+    // low-poly structure without the dense overlapping web of repeated OBJ meshes.
+    ctx.lineWidth=1;
+    for(i=0;i<mid.length-1;i++){
+      var depth=(mid[i].t+mid[i+1].t)*0.5;
+      ctx.strokeStyle=rgba(ac,(isLight?REAR_MOUNTAIN_RIDGE_LIGHT:REAR_MOUNTAIN_RIDGE_DARK)+depth*REAR_MOUNTAIN_RIDGE_DEPTH_BOOST);
+      ctx.beginPath(); ctx.moveTo(mid[i].x,mid[i].y); ctx.lineTo(mid[i+1].x,mid[i+1].y); ctx.stroke();
+    }
+    for(i=0;i<sil.length;i++){
+      var op=(isLight?REAR_MOUNTAIN_FACET_LIGHT:REAR_MOUNTAIN_FACET_DARK)+sil[i].t*REAR_MOUNTAIN_FACET_DEPTH_BOOST;
+      ctx.strokeStyle=rgba(ac,op);
+      ctx.beginPath(); ctx.moveTo(sil[i].x,sil[i].y); ctx.lineTo(mid[i].x,mid[i].y); ctx.lineTo(base[i].x,base[i].y); ctx.stroke();
+      if(i<sil.length-1){
+        ctx.strokeStyle=rgba(ac,op*REAR_MOUNTAIN_DIAGONAL_ALPHA);
+        ctx.beginPath();
+        if(i%2===0){ ctx.moveTo(mid[i].x,mid[i].y); ctx.lineTo(base[i+1].x,base[i+1].y); }
+        else { ctx.moveTo(base[i].x,base[i].y); ctx.lineTo(mid[i+1].x,mid[i+1].y); }
+        ctx.stroke();
+      }
+    }
+    ctx.lineWidth=1;
+  }
+
+  // Foreground mountain range. This is a SECOND, clearly separate layer in front
+  // of the tall horizon bank. Its base follows a floor-perspective ray away from
+  // the horizon, while its jagged skyline grows toward the outside/foreground.
+  // It is drawn AFTER the background bank so it cannot disappear behind it.
+  function drawForegroundMountainLayer(side,now,hz,sx,ac,hl){
+    var gap=MOUNTAIN_CENTER_GAP, inner=sx+side*(gap+FRONT_MOUNTAIN_INNER_OFFSET);
+    var outer=(side<0?VISUAL_LEFT:W);
+    var span=Math.abs(outer-inner)+FRONT_MOUNTAIN_EXTRA_WIDTH; // continue slightly beyond the visible edge
+
+    // Uneven peak spacing and different heights on each side prevent mirroring.
+    var tt=[0,0.055,0.12,0.19,0.27,0.35,0.44,0.53,0.62,0.71,0.79,0.87,0.94,1.0];
+    var hh=(side<0)
+      ? [0,7,16,8,27,13,39,20,53,28,70,39,94,122]
+      : [0,9,5,19,11,31,16,45,24,60,33,82,47,116];
+    var jx=(side<0)
+      ? [0,-1,2,-2,1,-3,2,-1,3,-2,2,-3,1,0]
+      : [0,2,-1,3,-2,1,-3,2,-2,3,-1,2,-2,0];
+
+    var sil=[],mid=[],base=[],i;
+    for(i=0;i<tt.length;i++){
+      var t=tt[i];
+      var x=inner+side*t*span;
+
+      // Keep the mountain/grid contact on one TRUE straight perspective ray.
+      // x advances linearly with t, so y must also advance linearly with t;
+      // the old t^1.48 term was what created the visible curved/bow-shaped base.
+      var baseDrop=FRONT_MOUNTAIN_BASE_START+FRONT_MOUNTAIN_BASE_DROP*t;
+      var by=hz+baseDrop;
+      var peak=hh[i];
+      var pf=peak/FRONT_MOUNTAIN_HEIGHT_NORMALIZER;
+
+      // Animate the actual foreground peak vertices. No x recycling or depth
+      // re-sorting: each peak stays in place and only breathes vertically.
+      var phase=i*FRONT_MOUNTAIN_PHASE_STEP+(side<0?FRONT_MOUNTAIN_PHASE_LEFT:FRONT_MOUNTAIN_PHASE_RIGHT);
+      var motion=Math.sin(now*MOUNTAIN_SPEED*FRONT_MOUNTAIN_WAVE1_SPEED+phase)*(FRONT_MOUNTAIN_WAVE1_BASE+FRONT_MOUNTAIN_WAVE1_HEIGHT*pf);
+      motion+=Math.sin(now*MOUNTAIN_SPEED*FRONT_MOUNTAIN_WAVE2_SPEED+phase*FRONT_MOUNTAIN_WAVE2_PHASE)*(FRONT_MOUNTAIN_WAVE2_BASE+FRONT_MOUNTAIN_WAVE2_HEIGHT*pf);
+      motion*=FRONT_MOUNTAIN_CENTER_MOTION+FRONT_MOUNTAIN_OUTER_MOTION*Math.min(1,t*FRONT_MOUNTAIN_MOTION_RAMP);
+
+      var sy=by-peak-motion;
+      var mx=x+side*jx[i]*FRONT_MOUNTAIN_JITTER;
+      // The interior ridge forms the second red-style jagged line, not a flat strip.
+      var midBlend=FRONT_MOUNTAIN_MID_BLEND+((i%4)-1.5)*FRONT_MOUNTAIN_MID_VARIATION;
+      var my=sy+(by-sy)*midBlend-motion*FRONT_MOUNTAIN_MID_MOTION;
+
+      sil.push({x:x,y:sy,t:t,h:peak});
+      mid.push({x:mx,y:my,t:t,h:peak*FRONT_MOUNTAIN_MID_HEIGHT});
+      base.push({x:x,y:by,t:t,h:0});
+    }
+
+    // Solid body: this is deliberately opaque so the foreground range visually
+    // sits in front of the rear bank and the moving grid, making the two layers clear.
+    ctx.beginPath();
+    ctx.moveTo(sil[0].x,sil[0].y);
+    for(i=1;i<sil.length;i++) ctx.lineTo(sil[i].x,sil[i].y);
+    for(i=base.length-1;i>=0;i--) ctx.lineTo(base[i].x,base[i].y);
+    ctx.closePath();
+    ctx.fillStyle=bgHex; ctx.fill();
+    ctx.fillStyle=rgba(ac,isLight?FRONT_MOUNTAIN_FILL_LIGHT:FRONT_MOUNTAIN_FILL_DARK); ctx.fill();
+
+    // Foreground skyline: the complete crest uses the secondary/highlight theme color
+    // so it stays continuous even where the two ranges overlap.
+    ctx.lineWidth=FRONT_MOUNTAIN_OUTLINE_WIDTH;
+    for(i=0;i<sil.length-1;i++){
+      var a=sil[i],b=sil[i+1];
+      var q=(a.t+b.t)*0.5;
+      ctx.strokeStyle=rgba(hl,(isLight?FRONT_MOUNTAIN_OUTLINE_LIGHT:FRONT_MOUNTAIN_OUTLINE_DARK)+FRONT_MOUNTAIN_OUTLINE_DEPTH_BOOST*q);
+      ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+    }
+
+    // Jagged inner ridge plus sparse facets. These lines deliberately follow the
+    // same perspective descent as the base so the layer reads as terrain, not a strip.
+    ctx.lineWidth=1;
+    for(i=0;i<mid.length-1;i++){
+      var q2=(mid[i].t+mid[i+1].t)*0.5;
+      ctx.strokeStyle=rgba(ac,(isLight?FRONT_MOUNTAIN_RIDGE_LIGHT:FRONT_MOUNTAIN_RIDGE_DARK)+FRONT_MOUNTAIN_RIDGE_DEPTH_BOOST*q2);
+      ctx.beginPath(); ctx.moveTo(mid[i].x,mid[i].y); ctx.lineTo(mid[i+1].x,mid[i+1].y); ctx.stroke();
+    }
+    for(i=0;i<sil.length;i++){
+      var op=(isLight?FRONT_MOUNTAIN_FACET_LIGHT:FRONT_MOUNTAIN_FACET_DARK)+FRONT_MOUNTAIN_FACET_DEPTH_BOOST*sil[i].t;
+      ctx.strokeStyle=rgba(ac,op);
+      ctx.beginPath();
+      ctx.moveTo(sil[i].x,sil[i].y);
+      ctx.lineTo(mid[i].x,mid[i].y);
+      ctx.lineTo(base[i].x,base[i].y);
+      ctx.stroke();
+      if(i<sil.length-1){
+        ctx.strokeStyle=rgba(ac,op*FRONT_MOUNTAIN_DIAGONAL_ALPHA);
+        ctx.beginPath();
+        if(i%2===0){
+          ctx.moveTo(mid[i].x,mid[i].y); ctx.lineTo(base[i+1].x,base[i+1].y);
+        } else {
+          ctx.moveTo(base[i].x,base[i].y); ctx.lineTo(mid[i+1].x,mid[i+1].y);
+        }
+        ctx.stroke();
+      }
+    }
+
+    // Perspective base edge. It is intentionally subdued: enough to define the
+    // front range without becoming the dominant straight "ramp" from older builds.
+    ctx.strokeStyle=rgba(ac,isLight?FRONT_MOUNTAIN_BASE_LIGHT:FRONT_MOUNTAIN_BASE_DARK);
+    ctx.lineWidth=FRONT_MOUNTAIN_BASE_WIDTH;
+    ctx.beginPath();
+    ctx.moveTo(base[0].x,base[0].y);
+    for(i=1;i<base.length;i++) ctx.lineTo(base[i].x,base[i].y);
+    ctx.stroke();
+    ctx.lineWidth=1;
+  }
+
+  function drawMountainBanks(now,hz,sx,ac,hl){
+    // Tiny opposing lateral drift plus independent vertical vertex motion keeps the
+    // horizon scenery alive while its bases stay planted.
+    var drift=Math.sin(now*MOUNTAIN_SPEED*MOUNTAIN_DRIFT_SPEED)*MOUNTAIN_DRIFT_AMOUNT;
+    var gap=MOUNTAIN_CENTER_GAP;
+
+    ctx.save();
+    ctx.beginPath(); ctx.rect(VISUAL_LEFT,0,(sx-gap)-VISUAL_LEFT,H); ctx.clip();
+    // Layer 1: tall rear bank. Layer 2: lower foreground bank drawn on top.
+    drawCustomBank(customMountainLeft,-1,hz,sx,ac,hl,drift,now);
+    drawForegroundMountainLayer(-1,now,hz,sx,ac,hl);
+    ctx.restore();
+
+    ctx.save();
+    ctx.beginPath(); ctx.rect(sx+gap,0,W-(sx+gap),H); ctx.clip();
+    drawCustomBank(customMountainRight,1,hz,sx,ac,hl,-drift,now);
+    drawForegroundMountainLayer(1,now,hz,sx,ac,hl);
+    ctx.restore();
+    ctx.lineWidth=1;
+  }
+
+  function drawWaves(now){
+    fillBg();
+    for(var k=0;k<st.l.length;k++){ var L=st.l[k], c=pick(L.ci), x;
+      ctx.fillStyle=rgba(c,isLight?WAVES_ALPHA_LIGHT:WAVES_ALPHA_DARK);
+      ctx.beginPath(); ctx.moveTo(0,H);
+      for(x=0;x<=W;x+=WAVES_X_STEP){ var y=L.yb+Math.sin(x/L.wl*6.2832 + now*L.sp + L.ph)*L.amp; ctx.lineTo(x,y); }
+      ctx.lineTo(W,H); ctx.closePath(); ctx.fill(); }
+  }
+  function makeGlow(color,size){
+    var c=document.createElement("canvas"); c.width=size; c.height=size;
+    var x=c.getContext?c.getContext("2d"):null; if(!x) return c;
+    var r=size/2, g=x.createRadialGradient(r,r,0,r,r,r);
+    g.addColorStop(0,"rgba(255,255,255,"+MAGIC_GLOW_WHITE_ALPHA+")");
+    g.addColorStop(MAGIC_GLOW_MIDPOINT,rgba(color,MAGIC_GLOW_COLOR_ALPHA));
+    g.addColorStop(1,rgba(color,0));
+    x.fillStyle=g; x.fillRect(0,0,size,size);
+    return c;
+  }
+  function buildMagicSprites(){ st.sprites=[]; for(var i=0;i<pal.length;i++) st.sprites.push(makeGlow(pal[i],MAGIC_SPRITE_SIZE)); }
+  function drawMagic(now){
+    fillBg();
+    if(st.spriteVer!==colorVer){ buildMagicSprites(); st.spriteVer=colorVer; }
+    for(var i=0;i<st.p.length;i++){ var o=st.p[i];
+      o.y-=o.vy; o.sw+=o.ss; o.tw+=o.tsp;
+      if(o.y<-MAGIC_RESET_MARGIN){ o.y=H+MAGIC_RESET_MARGIN; o.x=Math.random()*W; o.trail.length=0; }
+      var x=o.x+Math.sin(o.sw)*o.amp, tw=0.5+0.5*Math.sin(o.tw), ga=(isLight?MAGIC_ALPHA_LIGHT:MAGIC_ALPHA_DARK)*(MAGIC_ALPHA_MIN+MAGIC_ALPHA_RANGE*tw), c=pick(o.ci);
+      o.trail.push(x); o.trail.push(o.y);                 // record path (x,y pairs)
+      var maxTrailValues=Math.max(0,Math.round(MAGIC_TRAIL_LENGTH))*2;
+      while(o.trail.length>maxTrailValues && o.trail.length>=2){ o.trail.shift(); o.trail.shift(); }
+      var n=o.trail.length/2;                             // fading spark trail, oldest first
+      for(var j=0;j<n-1;j+=2){ var fr=(j+1)/n, tr=MAGIC_TRAIL_RADIUS_MIN+fr*MAGIC_TRAIL_RADIUS_RANGE, ta=ga*fr*MAGIC_TRAIL_ALPHA;
+        ctx.fillStyle=rgba(c,ta); ctx.beginPath(); ctx.arc(o.trail[j*2],o.trail[j*2+1],tr,0,6.2832,false); ctx.fill(); }
+      var sp=st.sprites[o.ci%st.sprites.length], ds=o.gs*(MAGIC_SPRITE_SCALE_MIN+MAGIC_SPRITE_SCALE_RANGE*tw);
+      ctx.globalAlpha=ga; ctx.drawImage(sp,x-ds/2,o.y-ds/2,ds,ds); ctx.globalAlpha=1;
+      ctx.fillStyle="rgba(255,255,255,"+(ga*MAGIC_CORE_ALPHA).toFixed(3)+")";
+      ctx.beginPath(); ctx.arc(x,o.y,o.core,0,6.2832,false); ctx.fill(); }
+  }
+  function drawStarfield(now){
+    fillBg();
+    // Keep the warp composition intact; only lower its focal point as one unit.
+    var cx=visualCenterX(), cy=H/2+STARFIELD_Y_OFFSET;
+    // Use the farthest canvas corner so streak opacity/width still ramps
+    // smoothly after moving the vanishing point to the right.
+    var maxDx=Math.max(cx, W-cx), maxDy=Math.max(cy, H-cy);
+    var maxR=Math.sqrt(maxDx*maxDx+maxDy*maxDy);
+    for(var i=0;i<st.s.length;i++){ var s=st.s[i];
+      var ca=Math.cos(s.a), sa=Math.sin(s.a), ox=cx+ca*s.rad, oy=cy+sa*s.rad;
+      s.rad += s.sp*(1+s.rad*STARFIELD_ACCELERATION);
+      var nx=cx+ca*s.rad, ny=cy+sa*s.rad, c=pick(s.ci), a=Math.min(1, s.rad/maxR+STARFIELD_ALPHA_BASE);
+      ctx.strokeStyle=rgba(c, a*(isLight?STARFIELD_ALPHA_LIGHT:STARFIELD_ALPHA_DARK)); ctx.lineWidth=Math.max(STARFIELD_LINE_MIN_WIDTH, s.rad/maxR*STARFIELD_LINE_WIDTH_SCALE*s.sz);
+      ctx.beginPath(); ctx.moveTo(ox,oy); ctx.lineTo(nx,ny); ctx.stroke();
+      if(nx<-STARFIELD_RESET_MARGIN||nx>W+STARFIELD_RESET_MARGIN||ny<-STARFIELD_RESET_MARGIN||ny>H+STARFIELD_RESET_MARGIN){ s.a=Math.random()*6.2832; s.rad=Math.random()*STARFIELD_RESET_RADIUS_RANGE+STARFIELD_RESET_RADIUS_MIN; s.sp=STARFIELD_SPEED_MIN+Math.random()*STARFIELD_SPEED_RANGE; s.sz=STARFIELD_SIZE_MIN+Math.random()*STARFIELD_SIZE_RANGE; } }
+  }
+  function drawAurora(now){
+    fillBg();
+    for(var k=0;k<st.r.length;k++){ var R=st.r[k], c=pick(R.ci), x;
+      ctx.beginPath();
+      for(x=0;x<=W;x+=AURORA_X_STEP){ var y=R.yb+Math.sin(x/R.wl*6.2832 + now*R.sp + R.ph)*R.amp; if(x===0)ctx.moveTo(x,y); else ctx.lineTo(x,y); }
+      for(x=W;x>=0;x-=AURORA_X_STEP){ var y2=R.yb+R.th+Math.sin(x/R.wl*6.2832 + now*R.sp + R.ph + AURORA_BACK_PHASE)*R.amp; ctx.lineTo(x,y2); }
+      ctx.closePath();
+      var g=ctx.createLinearGradient(0,R.yb-R.amp,0,R.yb+R.th+R.amp);
+      g.addColorStop(0,rgba(c,0)); g.addColorStop(0.5,rgba(c,isLight?AURORA_ALPHA_LIGHT:AURORA_ALPHA_DARK)); g.addColorStop(1,rgba(c,0));
+      ctx.fillStyle=g; ctx.fill(); }
+  }
+  function draw(now){
+    if(pattern==="constellation") drawConstellation(now);
+    else if(pattern==="waves") drawWaves(now);
+    else if(pattern==="magic") drawMagic(now);
+    else if(pattern==="starfield") drawStarfield(now);
+    else if(pattern==="aurora") drawAurora(now);
+    else drawAmbient(now);
+  }
+  function frame(){ if(!ctx||!enabled) return; draw((new Date()).getTime()); }
+
+  // ── DOM fallback (only when canvas has no 2D context) ──
+  function recolorDom(){ if(!domDots) return; for(var i=0;i<domDots.length;i++){ var c=pick(i); domDots[i].el.style.background="rgb("+c.r+","+c.g+","+c.b+")"; } }
+  function buildDom(){
+    var host=document.getElementById("app-root");
+    domLayer=document.createElement("div");
+    domLayer.style.position="absolute"; domLayer.style.top="0"; domLayer.style.left="0";
+    domLayer.style.width=W+"px"; domLayer.style.height=H+"px"; domLayer.style.zIndex="0"; domLayer.style.overflow="hidden";
+    host.insertBefore(domLayer, host.firstChild);
+    domDots=[];
+    for(var i=0;i<9;i++){ var d=document.createElement("div"), sz=90+Math.floor(Math.random()*130);
+      d.style.position="absolute"; d.style.width=sz+"px"; d.style.height=sz+"px"; d.style.borderRadius="50%";
+      setOpacity(d, isLight?0.16:0.13); domLayer.appendChild(d);
+      domDots.push({el:d,x:Math.random()*W,y:Math.random()*H,sz:sz,vx:(Math.random()-0.5)*0.32,vy:(Math.random()-0.5)*0.28}); }
+    recolorDom();
+  }
+  function domFrame(){ if(!enabled) return; for(var i=0;i<domDots.length;i++){ var o=domDots[i]; o.x+=o.vx;o.y+=o.vy;
+    if(o.x<-o.sz)o.x=W; else if(o.x>W)o.x=-o.sz; if(o.y<-o.sz)o.y=H; else if(o.y>H)o.y=-o.sz;
+    o.el.style.left=Math.round(o.x)+"px"; o.el.style.top=Math.round(o.y)+"px"; } }
+
+  function ensureRunning(){
+    if(ctx){ if(!timer) timer=setInterval(frame,33); }
+    else if(domLayer){ if(!timer) timer=setInterval(domFrame,40); }
+    else { buildDom(); timer=setInterval(domFrame,40); }
+  }
+  function stopRunning(){ if(timer){ clearInterval(timer); timer=null; } }
+
+  function start(){
+    if(started) return; started=true;
+    if(!pal) pal=palFrom(THEMES.amber);
+    cv=document.getElementById("bg-canvas");
+    if(cv){ try{ ctx = cv.getContext ? cv.getContext("2d") : null; }catch(e){ ctx=null; } }
+    if(ctx) initPattern();
+    if(enabled) ensureRunning();
+    else if(cv) cv.style.display="none";
+  }
+  function setEnabled(on){
+    enabled=on;
+    if(!started) return;             // start() will honour the flag
+    if(on){ if(cv) cv.style.display="block"; if(domLayer) domLayer.style.display="block"; ensureRunning(); }
+    else  { stopRunning(); if(cv) cv.style.display="none"; if(domLayer) domLayer.style.display="none"; }
+  }
+  function setPattern(id){ pattern=id; if(ctx) initPattern(); }
+
+  return { start:start, setColors:setColors, setEnabled:setEnabled, setPattern:setPattern };
+})();
+
+// Scale a centred box from its own centre (used for the popup bounce). Uses the
+// IE9 -ms-transform property; unprefixed transform covers any higher mode.
+function setScale(el, s){
+  var v = "scale(" + s + ")";
+  el.style.msTransformOrigin = "50% 50%"; el.style.transformOrigin = "50% 50%";
+  el.style.msTransform = v; el.style.transform = v;
+}
+function clearScale(el){ el.style.msTransform = ""; el.style.transform = ""; }
+
+// ── Bouncy popup show / hide (scales from the box centre) ──
+function popIn(ov, box){
+  if(!ov) return;
+  ov.style.display="block";
+  if(!box){ setOpacity(ov,1); return; }
+  var t0=(new Date()).getTime(), dur=280;
+  setOpacity(ov,0); setScale(box,0.62);
+  var tm=setInterval(function(){
+    var p=((new Date()).getTime()-t0)/dur; if(p>1)p=1;
+    setOpacity(ov, p<0.6? p/0.6 : 1);
+    setScale(box, 0.62+(1-0.62)*easeOutBack(p));
+    if(p>=1){ clearInterval(tm); clearScale(box); setOpacity(ov,1); }
+  },16);
+}
+function popOut(ov, box, done){
+  if(!ov){ if(done) done(); return; }
+  var t0=(new Date()).getTime(), dur=150;
+  var tm=setInterval(function(){
+    var p=((new Date()).getTime()-t0)/dur; if(p>1)p=1;
+    setOpacity(ov, 1-p);
+    if(box) setScale(box, 1-0.10*p);
+    if(p>=1){ clearInterval(tm); ov.style.display="none"; setOpacity(ov,1); if(box) clearScale(box); if(done) done(); }
+  },16);
+}
+
 
 // ── ffprobe integration ──────────────────────────────────
 
@@ -753,7 +1871,7 @@ function probeWarning(job, preset) {
   // Video preset applied to audio-only file
   if (!p.hasVideo && preset && preset.args && !/^-vn/i.test(preset.args)) {
     var hasVCodec = /-c:v|libx264|libx265|prores|dnxhd|libvpx/i.test(preset.args);
-    if (hasVCodec) warnings.push("No video stream — video preset may fail");
+    if (hasVCodec) warnings.push("No video stream \u2014 video preset may fail");
   }
   // Audio-only preset applied to video file (usually fine, just flag)
   // Mismatch: target preset has a fixed scale but source is already smaller
@@ -917,7 +2035,7 @@ function openInspect(jobId) {
   var body  = document.getElementById("inspect-body");
   if (!ov) return;
 
-  var displayTitle = job.filename + (job.probe && job.probe.ok ? "" : " — probe unavailable");
+  var displayTitle = job.filename + (job.probe && job.probe.ok ? "" : " \u2014 probe unavailable");
   title.innerText = displayTitle;
   title.style.color = t.ac;
   box.style.background   = t.surf;
@@ -929,6 +2047,7 @@ function openInspect(jobId) {
 
   var closeBtn = document.getElementById("inspect-close");
   if (closeBtn) {
+    closeBtn.innerText = L("close");
     closeBtn.style.borderColor = t.bord;
     closeBtn.style.color       = t.muted;
   }
@@ -966,12 +2085,12 @@ function openInspect(jobId) {
     body.innerText = lines.join("\n");
   }
 
-  ov.style.display = "block";
+  popIn(ov, document.getElementById("inspect-box"));
 }
 
 function closeInspect() {
   var ov = document.getElementById("inspect-overlay");
-  if (ov) ov.style.display = "none";
+  popOut(ov, document.getElementById("inspect-box"));
 }
 
 // ── FPS hint for image sequences ─────────────────────────
@@ -1103,6 +2222,7 @@ var THEMES = {
 function applyTheme(name) {
   var t = THEMES[name] || THEMES.amber;
   currentTheme = name;
+  bgAnim.setColors(t);
 
   function s(id, prop, val) {
     var el = document.getElementById(id);
@@ -1228,6 +2348,8 @@ function applyTheme(name) {
   // Re-render preset list and jobs so their inline styles update
   renderPresets();
   renderJobs();
+  renderBgControls();
+  renderLangControls();
   saveSettings();
 }
 
@@ -1248,27 +2370,72 @@ function styleSettingsBtn(id, t) {
 function getT() { return THEMES[currentTheme] || THEMES.amber; }
 
 var BASE_W = 980, BASE_H = 700;
+var lastClientW = 0, lastClientH = 0;
+
+// Keep the user's selected UI zoom (1x / 1.5x / 2x) as the REAL IE zoom.
+// HTA/IE hit-testing is reliable with that normal zoom, but can become offset if
+// we replace it with an arbitrary per-monitor zoom value.  When Windows changes
+// the client-pixel size while crossing monitors with different DPI, compensate
+// only for that extra ratio with a CSS transform.  IE maps pointer coordinates
+// through transforms correctly, so the top-right header buttons stay clickable.
+function fitAppRootToViewport(force) {
+  try {
+    var haveW = document.body.clientWidth  || document.documentElement.clientWidth  || 0;
+    var haveH = document.body.clientHeight || document.documentElement.clientHeight || 0;
+    if (!haveW || !haveH) return;
+    if (!force && haveW === lastClientW && haveH === lastClientH) return;
+    lastClientW = haveW; lastClientH = haveH;
+
+    var sx = haveW / BASE_W;
+    var sy = haveH / BASE_H;
+    var targetScale = (sx > sy) ? sx : sy;
+    if (targetScale < 0.25) targetScale = 0.25;
+    if (targetScale > 4) targetScale = 4;
+
+    var root = document.getElementById("app-root");
+    if (!root) return;
+
+    // Preserve the ordinary UI zoom selected in Settings.  This is the same
+    // zoom path that was already working correctly for buttons at 1.5x / 2x.
+    root.style.zoom = currentScale;
+
+    // Only the monitor/DPI mismatch is applied as a transform.  On the monitor
+    // where the requested window size maps normally this is exactly scale(1).
+    var monitorScale = targetScale / currentScale;
+    if (monitorScale < 0.25) monitorScale = 0.25;
+    if (monitorScale > 4) monitorScale = 4;
+    var tr = "scale(" + monitorScale + ")";
+    root.style.msTransformOrigin = "0 0";
+    root.style.transformOrigin = "0 0";
+    root.style.msTransform = tr;
+    root.style.transform = tr;
+  } catch(_) {}
+}
+
 function applyScale(n) {
   if (n !== 1.5 && n !== 2) n = 1;   // 1x, 1.5x and 2x supported
   currentScale = n;
-  // Zoom the fixed-size root box (980x700) and grow the window to match,
-  // so the layout is identical, just larger. Because #app-root has an
-  // explicit size (not a viewport fill), zoom scales it cleanly to
-  // 980n x 700n with no double-counting.
+
+  // Set the real IE zoom immediately.  Per-monitor compensation is layered on
+  // separately by fitAppRootToViewport(), so hit-testing stays stable.
   var root = document.getElementById("app-root");
   if (root) root.style.zoom = n;
+
+  // The scale buttons intentionally resize the window. This is the ONLY place
+  // normal UI operation programmatically changes the outer window size.
   try {
-    // resizeTo sets the OUTER window size; add the chrome (title bar +
-    // borders) so the client area is ~BASE_W*n x BASE_H*n.
     var CHROME_W = 16, CHROME_H = 39;
     var w = BASE_W * n + CHROME_W, h = BASE_H * n + CHROME_H;
     if (w > screen.availWidth)  w = screen.availWidth;
     if (h > screen.availHeight) h = screen.availHeight;
     window.resizeTo(w, h);
-    var x = Math.max(0, Math.floor((screen.width  - w) / 2));
-    var y = Math.max(0, Math.floor((screen.height - h) / 2));
-    window.moveTo(x, y);
   } catch(_) {}
+
+  // Let Windows finish the resize/DPI negotiation, then make the design fill
+  // whatever client area resulted. No moveTo/resizeTo happens in this path.
+  fitAppRootToViewport(true);
+  window.setTimeout(function(){ fitAppRootToViewport(true); }, 60);
+
   // update button styles
   var t = getT();
   var ids = [1,1.5,2];
@@ -1280,6 +2447,50 @@ function applyScale(n) {
     btn.style.fontWeight  = (ids[i]===n) ? "900" : "700";
   }
   saveSettings();
+}
+
+// React immediately to a monitor/DPI client-size change, but only by changing
+// CSS zoom. A lightweight watcher also catches mshta/IE monitor transitions that
+// do not reliably emit a resize event. It does nothing unless client size changed.
+window.onresize = function(){ fitAppRootToViewport(false); };
+var viewportWatchTimer = window.setInterval(function(){ fitAppRootToViewport(false); }, 120);
+
+// ── Background: enable/disable + pattern selection ───────
+function toggleFancy() {
+  fancyEnabled = !fancyEnabled;
+  bgAnim.setEnabled(fancyEnabled);
+  renderBgControls();
+  saveSettings();
+}
+function chooseBgPattern(id) {
+  if (!fancyEnabled) return;      // pattern buttons are disabled while off
+  bgPattern = id;
+  bgAnim.setPattern(id);
+  renderBgControls();
+  saveSettings();
+}
+// Colour the toggle + the six pattern buttons for the current theme and state.
+function renderBgControls() {
+  var t = getT();
+  var ft = document.getElementById("fancy-toggle");
+  if (ft) {
+    ft.innerText = L("fancy") + ": " + (fancyEnabled ? L("on") : L("off"));
+    ft.style.background = "none";
+    ft.style.borderColor = fancyEnabled ? t.ac : t.bord;
+    ft.style.color       = fancyEnabled ? t.ac : t.muted;
+  }
+  var ids  = ["ambient","constellation","waves","magic","starfield","aurora"];
+  var keys = ["pat_ambient","pat_futuristic","pat_waves","pat_magic","pat_starfield","pat_aurora"];
+  for (var i = 0; i < ids.length; i++) {
+    var b = document.getElementById("pat-" + ids[i]);
+    if (!b) continue;
+    b.innerText = L(keys[i]);
+    var sel = (ids[i] === bgPattern);
+    b.disabled = !fancyEnabled;
+    b.style.background = "none";
+    if (!fancyEnabled) { b.style.borderColor = t.bord; b.style.color = t.bord; }
+    else { b.style.borderColor = sel ? t.ac : t.bordHi; b.style.color = sel ? t.ac : t.muted; }
+  }
 }
 
 // ── Settings panel toggle ───────────────────────────────
@@ -1306,9 +2517,17 @@ document.onclick = function(e) {
 
 // ── Boot ───────────────────────────────────────────────
 window.onload = function() {
-  window.moveTo((screen.width-980)/2, (screen.height-700)/2);
+  // Keep the window wherever Windows/the user places it; do not force it onto
+  // the primary monitor during startup.
   loadSettings();   // applies saved scale, which sizes the window
   loadPresets();
+  bgAnim.setPattern(bgPattern);
+  bgAnim.setEnabled(fancyEnabled);
+  bgAnim.start();
+  applyLanguage();
+  fitAppRootToViewport(true);
+  window.setTimeout(function(){ fitAppRootToViewport(true); }, 80);
+  window.setTimeout(function(){ fitAppRootToViewport(true); }, 300);
 };
 
 function appFolder() {
@@ -1440,6 +2659,9 @@ function loadSettings() {
     var s = (new Function("return " + raw))();
     if (s.favourites) favourites = s.favourites;
     if (s.scale) currentScale = s.scale;
+    if (typeof s.fancy !== "undefined") fancyEnabled = !!s.fancy;
+    if (s.pattern) bgPattern = (s.pattern === "bokeh") ? "magic" : s.pattern;
+    if (s.lang) currentLang = s.lang;
     applyTheme(s.theme || "amber");
     applyScale(currentScale);
   } catch(e) { applyTheme("amber"); applyScale(1); }
@@ -1449,7 +2671,7 @@ function saveSettings() {
   try {
     var fkeys = [];
     for (var k in favourites) { if (favourites[k]) fkeys.push('"'+k+'":true'); }
-    var json = '{"theme":"'+currentTheme+'","scale":'+currentScale+',"favourites":{'+fkeys.join(",")+'}}';
+    var json = '{"theme":"'+currentTheme+'","scale":'+currentScale+',"lang":"'+currentLang+'","fancy":'+(fancyEnabled?"true":"false")+',"pattern":"'+bgPattern+'","favourites":{'+fkeys.join(",")+'}}';
     writeTextFile(settingsPath(), json);
   } catch(e) {}
 }
@@ -1645,7 +2867,7 @@ function renderPresets() {
     var gp = groups[gname];
     // skip empty non-custom groups produced by filtering
     if (gname !== "Custom" && (!gp || !gp.length)) continue;
-    html += '<div class="group-header" style="background:'+t.surf2+';color:'+t.muted+'">'+esc(gname)+'</div>';
+    html += '<div class="group-header" style="background:'+t.surf2+';color:'+t.muted+'">'+esc(gname==="Custom"?L("grp_custom"):gname)+'</div>';
     for (var pi = 0; pi < gp.length; pi++) {
       var p = gp[pi];
       var isActive = selectedPreset && selectedPreset.id === p.id;
@@ -1676,7 +2898,7 @@ function renderPresets() {
             + '</div>';
     }
     if (gname === "Custom") {
-      html += '<div class="new-tpl-row"><button id="btn-newtpl" onclick="openEditor(null)" style="border-color:'+t.bord+';color:'+t.ac+';background:'+t.surf2+'">+ New custom template</button></div>';
+      html += '<div class="new-tpl-row"><button id="btn-newtpl" onclick="openEditor(null)" style="border-color:'+t.bord+';color:'+t.ac+';background:'+t.surf2+'">'+L("new_custom")+'</button></div>';
     }
   }
   if (!html) html = '<div style="padding:16px;font-size:11px;color:'+t.muted+';text-align:center;">No presets match</div>';
@@ -1751,23 +2973,21 @@ function showApplyPresetModal(preset, pendingList, selectedList) {
 
   var title = document.getElementById("apply-title");
   title.style.color = t.ac;
-  title.innerText = "Apply preset to pending jobs?";
+  title.innerText = L("apply_title");
 
   var body = document.getElementById("apply-body");
   body.style.color = t.muted;
   body.innerHTML =
       '<b style="color:'+t.text+'">'+esc(preset.name)+'</b><br>'
-    + 'You have '+nAll+' pending job'+(nAll===1?'':'s')+'. '
-    + 'Apply this preset to all of them, or only the '
-    + '<b style="color:'+t.text+'">'+nSel+'</b> currently selected?'
-    + (nSel===0 ? '<br><span style="color:'+t.err+'">No jobs are selected.</span>' : '');
+    + L("apply_q", nAll, '<b style="color:'+t.text+'">'+nSel+'</b>')
+    + (nSel===0 ? '<br><span style="color:'+t.err+'">'+L("apply_none")+'</span>' : '');
 
   var bAll = document.getElementById("apply-all");
   bAll.style.borderColor = t.ac; bAll.style.color = t.ac; bAll.style.background="none";
-  bAll.innerHTML = "Apply to all (" + nAll + ")";
+  bAll.innerHTML = L("apply_all", nAll);
 
   var bSel = document.getElementById("apply-selected");
-  bSel.innerHTML = "Only selected (" + nSel + ")";
+  bSel.innerHTML = L("apply_selected", nSel);
   if (nSel === 0) {
     bSel.disabled = true;
     bSel.style.borderColor = t.bord; bSel.style.color = t.bord; bSel.style.background="none";
@@ -1777,13 +2997,15 @@ function showApplyPresetModal(preset, pendingList, selectedList) {
   }
 
   var bCancel = document.getElementById("apply-cancel");
+  bCancel.innerText = L("cancel");
   bCancel.style.borderColor = t.bord; bCancel.style.color = t.muted; bCancel.style.background="none";
 
-  ov.style.display = "block";
+  popIn(ov, box);
 }
 function closeApplyModal() {
   var ov = document.getElementById("apply-overlay");
-  if (ov) ov.style.display = "none";
+  var box = document.getElementById("apply-box");
+  popOut(ov, box);
   pendingApply = null;
 }
 function confirmApplyAll() {
@@ -1837,7 +3059,7 @@ function openEditor(id) {
 
   function opt(v, label, sel) { return '<option value="'+v+'"'+(sel===v?' selected':'')+'>'+label+'</option>'; }
 
-  var inputOpts = opt("*","Any format", inSel) + opt("mp4","MP4", inSel) + opt("mov","MOV", inSel)
+  var inputOpts = opt("*",L("ed_anyfmt"), inSel) + opt("mp4","MP4", inSel) + opt("mov","MOV", inSel)
     + opt("mkv","MKV", inSel) + opt("avi","AVI", inSel) + opt("wmv","WMV", inSel) + opt("mxf","MXF", inSel)
     + opt("webm","WEBM", inSel) + opt("flv","FLV", inSel);
   var outOpts = opt("mp4","MP4", outExt) + opt("mov","MOV", outExt) + opt("mkv","MKV", outExt)
@@ -1857,41 +3079,41 @@ function openEditor(id) {
 
   var html = ''
     + '<div>'
-    + '<div id="editor-title" style="color:'+t.ac+'">'+(id?"Edit / duplicate template":"New custom template")+'</div>'
-    + '<div class="ed-row"><label style="color:'+t.muted+'">Template name</label>'
+    + '<div id="editor-title" style="color:'+t.ac+'">'+(id?L("ed_title_edit"):L("ed_title_new"))+'</div>'
+    + '<div class="ed-row"><label style="color:'+t.muted+'">'+L("ed_name")+'</label>'
     + '<input type="text" id="ed-name" value="'+esc(name)+'" style="background:'+t.surf2+';border-color:'+t.bord+';color:'+t.text+'" /></div>'
     + '<div class="ed-cols">'
-    + '<div class="ed-col"><label style="color:'+t.muted+'">Applies to input</label>'
+    + '<div class="ed-col"><label style="color:'+t.muted+'">'+L("ed_applies")+'</label>'
     + '<select id="ed-input" style="background:'+t.surf2+';border-color:'+t.bord+';color:'+t.text+'">'+inputOpts+'</select></div>'
-    + '<div class="ed-col"><label style="color:'+t.muted+'">Output format</label>'
+    + '<div class="ed-col"><label style="color:'+t.muted+'">'+L("ed_outfmt")+'</label>'
     + '<select id="ed-output" style="background:'+t.surf2+';border-color:'+t.bord+';color:'+t.text+'">'+outOpts+'</select></div>'
     + '</div>'
     + '<div class="ed-cols">'
-    + '<div class="ed-col"><label style="color:'+t.muted+'">Video codec</label>'
+    + '<div class="ed-col"><label style="color:'+t.muted+'">'+L("ed_vcodec")+'</label>'
     + '<select id="ed-vcodec" style="background:'+t.surf2+';border-color:'+t.bord+';color:'+t.text+'">'+vcOpts+'</select></div>'
-    + '<div class="ed-col"><label style="color:'+t.muted+'">Encode speed</label>'
+    + '<div class="ed-col"><label style="color:'+t.muted+'">'+L("ed_speed")+'</label>'
     + '<select id="ed-speed" style="background:'+t.surf2+';border-color:'+t.bord+';color:'+t.text+'">'+spOpts+'</select></div>'
     + '</div>'
     + '<div class="ed-cols">'
-    + '<div class="ed-col"><label style="color:'+t.muted+'">Resolution (WxH, blank = keep)</label>'
+    + '<div class="ed-col"><label style="color:'+t.muted+'">'+L("ed_res")+'</label>'
     + '<input type="text" id="ed-scale" value="'+esc(f.scale.replace(":","x"))+'" placeholder="1920x1080" style="background:'+t.surf2+';border-color:'+t.bord+';color:'+t.text+'" /></div>'
-    + '<div class="ed-col"><label style="color:'+t.muted+'">Compression / CRF (0-51, lower = better)</label>'
+    + '<div class="ed-col"><label style="color:'+t.muted+'">'+L("ed_crf")+'</label>'
     + '<input type="text" id="ed-crf" value="'+esc(f.crf)+'" placeholder="20" style="background:'+t.surf2+';border-color:'+t.bord+';color:'+t.text+'" /></div>'
     + '</div>'
     + '<div class="ed-cols">'
-    + '<div class="ed-col"><label style="color:'+t.muted+'">Frame rate / FPS (blank = keep)</label>'
+    + '<div class="ed-col"><label style="color:'+t.muted+'">'+L("ed_fps")+'</label>'
     + '<input type="text" id="ed-fps" value="'+esc(fps)+'" placeholder="30" style="background:'+t.surf2+';border-color:'+t.bord+';color:'+t.text+'" /></div>'
     + '<div class="ed-col">&nbsp;</div>'
     + '</div>'
     + '<div class="ed-cols">'
-    + '<div class="ed-col"><label style="color:'+t.muted+'">Audio codec</label>'
+    + '<div class="ed-col"><label style="color:'+t.muted+'">'+L("ed_acodec")+'</label>'
     + '<select id="ed-acodec" style="background:'+t.surf2+';border-color:'+t.bord+';color:'+t.text+'">'+acOpts+'</select></div>'
-    + '<div class="ed-col"><label style="color:'+t.muted+'">Audio bitrate (blank = keep)</label>'
+    + '<div class="ed-col"><label style="color:'+t.muted+'">'+L("ed_abr")+'</label>'
     + '<input type="text" id="ed-abr" value="'+esc(f.abr)+'" placeholder="128k" style="background:'+t.surf2+';border-color:'+t.bord+';color:'+t.text+'" /></div>'
     + '</div>'
-    + '<div class="ed-row"><label style="color:'+t.muted+'">Extra ffmpeg args (advanced, optional)</label>'
+    + '<div class="ed-row"><label style="color:'+t.muted+'">'+L("ed_extra")+'</label>'
     + '<input type="text" id="ed-extra" value="'+esc(f.extra)+'" style="background:'+t.surf2+';border-color:'+t.bord+';color:'+t.text+';font-family:Consolas,monospace" /></div>'
-    + '<div class="ed-row"><label style="color:'+t.muted+'">Input args, placed before -i (advanced, e.g. image sequences)</label>'
+    + '<div class="ed-row"><label style="color:'+t.muted+'">'+L("ed_inargs")+'</label>'
     + '<input type="text" id="ed-inargs" value="'+esc(inArgs)+'" style="background:'+t.surf2+';border-color:'+t.bord+';color:'+t.text+';font-family:Consolas,monospace" /></div>'
     + '</div>';
 
@@ -1903,17 +3125,17 @@ function openEditor(id) {
   if (box) { box.style.background = t.surf; box.style.borderColor = t.bordHi; box.style.color = t.text; }
   var btnSave   = document.getElementById("ed-save");
   var btnCancel = document.getElementById("ed-cancel");
-  if (btnSave)   { btnSave.style.borderColor = t.ac; btnSave.style.color = t.ac; }
-  if (btnCancel) { btnCancel.style.borderColor = t.bord; btnCancel.style.color = t.muted; }
-  if (ov) ov.style.display = "block";
+  if (btnSave)   { btnSave.innerText = L("ed_save"); btnSave.style.borderColor = t.ac; btnSave.style.color = t.ac; }
+  if (btnCancel) { btnCancel.innerText = L("cancel"); btnCancel.style.borderColor = t.bord; btnCancel.style.color = t.muted; }
+  popIn(ov, document.getElementById("editor-box"));
 }
 
 function closeEditor() {
   var ov     = document.getElementById("editor-overlay");
+  var box    = document.getElementById("editor-box");
   var fields = document.getElementById("editor-fields");
-  if (ov)     ov.style.display = "none";
-  if (fields) fields.innerHTML = "";
   editingId = null;
+  popOut(ov, box, function() { if (fields) fields.innerHTML = ""; });
 }
 
 function val(id) { var e = document.getElementById(id); return e ? ("" + e.value).replace(/^\s+|\s+$/g, "") : ""; }
@@ -2265,7 +3487,7 @@ function pickOutputFolder() {
 }
 function resetOutput() {
   outputFolder="";
-  document.getElementById("out-path").innerHTML="&mdash; output subfolder next to each input file &mdash;";
+  document.getElementById("out-path").innerHTML="&mdash; "+L("output_default")+" &mdash;";
   document.getElementById("btn-resetout").style.display="none";
 }
 function buildOutputPath(job) {
@@ -2601,7 +3823,7 @@ function liveUpdateJob(job) {
       if (p.speed>0) etaStr="  ETA "+fmtSec((job.totalSec-p.timeSec)/p.speed);
       tlLabel.innerText=fmtSec(p.timeSec)+" / "+fmtSec(job.totalSec)+"  "+Math.round(pct)+"%"+etaStr;
     } else {
-      tlLabel.innerText="Converting...";
+      tlLabel.innerText=L("converting");
     }
   }
 
@@ -2707,8 +3929,8 @@ function toggleLog(id) {
   var el=document.getElementById("jlog-"+id);
   var btn=document.getElementById("jlogtoggle-"+id);
   if(!el)return;
-  if(el.style.display==="block"){el.style.display="none";btn.innerText="Show log";}
-  else{el.style.display="block";btn.innerText="Hide log";}
+  if(el.style.display==="block"){el.style.display="none";btn.innerText=L("show_log");}
+  else{el.style.display="block";btn.innerText=L("hide_log");}
 }
 
 // ── Render jobs ──────────────────────────────────────────
@@ -2784,16 +4006,16 @@ function renderJobs() {
     var bordCol = job.status==="running"?t.ac : job.status==="done"?t.ok : job.status==="error"?t.err : t.bord;
     var statusCol = job.status==="running"?t.ac : job.status==="done"?t.ok : job.status==="error"?t.err : t.muted;
     var actions="";
-    if(job.status==="running") actions+='<button onclick="abortJob('+job.id+')" style="border-color:'+t.err+';color:'+t.err+'">&#9632; Abort</button>';
-    if(job.status==="error"||job.status==="cancelled") actions+='<button onclick="restartJob('+job.id+')" style="border-color:'+t.ac+';color:'+t.ac+'">&#8635; Restart</button>';
-    if(job.status==="done") actions+='<button onclick="restartJob('+job.id+')" style="border-color:'+t.bord+';color:'+t.muted+'">&#8635; Re-run</button>';
-    if(job.status==="done") actions+='<button onclick="revealFile(\''+escJs(job.outputPath)+'\')  " style="border-color:'+t.bord+';color:'+t.muted+'">Show file</button>';
-    if(job.status==="pending"||job.status==="error"||job.status==="cancelled") actions+='<button onclick="removeJob('+job.id+')" style="border-color:'+t.bord+';color:'+t.muted+'">Remove</button>';
+    if(job.status==="running") actions+='<button onclick="abortJob('+job.id+')" style="border-color:'+t.err+';color:'+t.err+'">&#9632; '+L("abort")+'</button>';
+    if(job.status==="error"||job.status==="cancelled") actions+='<button onclick="restartJob('+job.id+')" style="border-color:'+t.ac+';color:'+t.ac+'">&#8635; '+L("restart")+'</button>';
+    if(job.status==="done") actions+='<button onclick="restartJob('+job.id+')" style="border-color:'+t.bord+';color:'+t.muted+'">&#8635; '+L("rerun")+'</button>';
+    if(job.status==="done") actions+='<button onclick="revealFile(\''+escJs(job.outputPath)+'\')  " style="border-color:'+t.bord+';color:'+t.muted+'">'+L("show_file")+'</button>';
+    if(job.status==="pending"||job.status==="error"||job.status==="cancelled") actions+='<button onclick="removeJob('+job.id+')" style="border-color:'+t.bord+';color:'+t.muted+'">'+L("remove")+'</button>';
     // Inspect button — always shown; dimmed if probe not yet available
     var inspectCol = (job.probe && job.probe.ok) ? t.ac : t.muted;
-    actions += '<button onclick="openInspect('+job.id+')" style="border-color:'+t.bord+';color:'+inspectCol+'" title="Inspect file info">\u2139</button>';
+    actions += '<button onclick="openInspect('+job.id+')" style="border-color:'+t.bord+';color:'+inspectCol+'" title="'+L("inspect")+'">\u2139</button>';
 
-    var logToggle=job.log?'<button class="job-log-btn" id="jlogtoggle-'+job.id+'" onclick="toggleLog('+job.id+')" style="color:'+t.muted+'">Show log</button>':"";
+    var logToggle=job.log?'<button class="job-log-btn" id="jlogtoggle-'+job.id+'" onclick="toggleLog('+job.id+')" style="color:'+t.muted+'">'+L("show_log")+'</button>':"";
 
     var pct=0;
     if (job.prog && job.totalSec>0) pct=Math.min(100,(job.prog.timeSec/job.totalSec)*100);
@@ -2895,7 +4117,7 @@ function renderJobs() {
         +checkCell
         +'<td class="job-name-cell"><div class="job-filename" title="'+esc(job.inputPath)+'" style="color:'+t.text+'">'+esc(job.filename)+'</div>'
         +'<div class="job-meta" style="color:'+t.muted+'">'+meta+'</div></td>'
-        +'<td class="job-right"><span class="job-status" style="color:'+statusCol+';border-color:'+statusCol+'">'+job.status.toUpperCase()+'</span>'
+        +'<td class="job-right"><span class="job-status" style="color:'+statusCol+';border-color:'+statusCol+'">'+L("st_"+job.status)+'</span>'
         +'<span class="job-btns">'+actions+'</span></td>'
         +'</tr></table></div>'
         + probeHtml
@@ -2908,9 +4130,9 @@ function renderJobs() {
         +'<div class="job-timeline" id="jtl-'+job.id+'" style="display:'+(showProg?"block":"none")+';border-color:'+t.bord+'">'
         +'<div class="job-timeline-fill" id="jtlfill-'+job.id+'" style="width:'+pct+'%;background:'+barColor+'"></div>'
         +'<div class="job-timeline-label" id="jtllabel-'+job.id+'" style="color:'+t.text+'">'
-        +(job.status==="done"?'&#10003; Done &mdash; '+fmtSec(job.totalSec||0)
+        +(job.status==="done"?'&#10003; '+L("done")+' &mdash; '+fmtSec(job.totalSec||0)
           :job.status==="running"&&job.prog&&job.totalSec?fmtSec(job.prog.timeSec)+" / "+fmtSec(job.totalSec)+"   "+Math.round(pct)+"%"
-          :job.status==="running"?"Converting...":"")
+          :job.status==="running"?L("converting"):"")
         +'</div>'
         +'</div>'
         +'<div class="job-stats" id="jstats-'+job.id+'" style="display:'+(job.status==="running"&&job.prog?"block":"none")+';color:'+t.muted+'">'
@@ -2933,12 +4155,12 @@ function updateTally() {
   var t=getT();
   var done=0,err=0,pend=0,run=0;
   for(var i=0;i<jobs.length;i++){var s=jobs[i].status;if(s==="done")done++;else if(s==="error")err++;else if(s==="pending")pend++;else if(s==="running")run++;}
-  if(!jobs.length){document.getElementById("tally").innerHTML="No jobs";document.getElementById("tally").style.color=t.muted;return;}
+  if(!jobs.length){document.getElementById("tally").innerHTML=L("no_jobs");document.getElementById("tally").style.color=t.muted;return;}
   var p=[];
-  if(run) p.push(run+" converting");
-  if(pend)p.push(pend+" pending");
-  if(done)p.push(done+" done");
-  if(err) p.push(err+" failed");
+  if(run) p.push(run+" "+L("t_converting"));
+  if(pend)p.push(pend+" "+L("t_pending"));
+  if(done)p.push(done+" "+L("t_done"));
+  if(err) p.push(err+" "+L("t_failed"));
   document.getElementById("tally").innerHTML=p.join(" &middot; ");
   document.getElementById("tally").style.color=t.muted;
 }
