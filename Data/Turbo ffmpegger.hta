@@ -220,8 +220,11 @@ body {
 /* Queue */
 #queue-wrap {
   position: absolute;
-  top: 174px; bottom: 0; left: 0;
-  width: 740px;
+  /* Explicit height (not top+bottom) so the container is bounded in quirks
+     mode — otherwise it grows to fit its content, overflows the panel and gets
+     clipped with no scrollbar. 612 (panel) - 174 (top) = 438. */
+  top: 174px; left: 0;
+  width: 740px; height: 438px;
   margin: 0; padding: 0 12px;
   overflow-y: auto;
 }
@@ -380,6 +383,35 @@ body {
   padding: 1px 5px; margin-left: 4px;
   vertical-align: middle; letter-spacing: .04em;
 }
+
+/* ── Per-job selection checkbox ── */
+.job-check-cell { display:table-cell; vertical-align:middle; width:1px; white-space:nowrap; padding-right:8px; }
+.job-check {
+  display:inline-block; width:15px; height:15px; line-height:13px;
+  text-align:center; font-size:11px; font-weight:700;
+  border-width:1px; border-style:solid; cursor:pointer; box-sizing:border-box;
+}
+
+/* ── Apply-preset scope modal ── */
+#apply-overlay {
+  display: none; position: absolute;
+  top: 0; left: 0; width: 980px; height: 700px;
+  z-index: 320; background: rgba(0,0,0,0.6);
+}
+#apply-box {
+  position: absolute; top: 50%; left: 50%;
+  width: 420px; margin-left: -210px; margin-top: -90px;
+  border-width: 1px; border-style: solid; padding: 16px 18px;
+}
+#apply-title { font-size: 13px; font-weight: 700; margin-bottom: 10px; }
+#apply-body  { font-size: 12px; line-height: 1.5; }
+#apply-btns  { margin-top: 16px; text-align: right; white-space: nowrap; }
+#apply-btns button {
+  font-size: 11px; font-weight: 700; padding: 5px 14px; margin-left: 8px;
+  cursor: pointer; font-family: Segoe UI, sans-serif;
+  border-width: 1px; border-style: solid; background: none;
+}
+#apply-btns button[disabled] { cursor: default; }
 </style>
 </head>
 <body id="body">
@@ -480,7 +512,7 @@ body {
         </div>
       </div>
     </div>
-    <div id="queue-wrap">
+    <div id="queue-wrap" onmousewheel="return queueWheel()">
       <div id="queue-empty">
         <div>&#127916;</div>
         <div id="empty-text">Drop files and pick a preset to get started</div>
@@ -515,6 +547,18 @@ body {
     <div id="inspect-title"></div>
     <div id="inspect-body"></div>
     <button id="inspect-close" onclick="closeInspect()">Close</button>
+    <div style="clear:both"></div>
+  </div>
+</div>
+<div id="apply-overlay">
+  <div id="apply-box">
+    <div id="apply-title"></div>
+    <div id="apply-body"></div>
+    <div id="apply-btns">
+      <button id="apply-cancel"   onclick="closeApplyModal()">Cancel</button>
+      <button id="apply-selected" onclick="confirmApplySelected()">Only selected</button>
+      <button id="apply-all"      onclick="confirmApplyAll()">Apply to all</button>
+    </div>
     <div style="clear:both"></div>
   </div>
 </div>
@@ -1290,6 +1334,73 @@ function settingsPath() { return appFolder() + "\\settings.json"; }
 // original XMLHTTP read (so anything that worked before still works), then to
 // the FileSystemObject as a last resort. The helper throws only if all three
 // fail, so each caller's existing try/catch behaves exactly as before.
+// Windows-1252 chars in the 0x80–0x9F range mapped back to their byte value.
+// (0x00–0x7F and 0xA0–0xFF already equal their byte in CP1252.) Used to undo a
+// UTF-8-read-as-ANSI when the tier-3 fallback below has to run.
+var CP1252_REV = {
+  0x20AC:0x80,0x201A:0x82,0x0192:0x83,0x201E:0x84,0x2026:0x85,0x2020:0x86,
+  0x2021:0x87,0x02C6:0x88,0x2030:0x89,0x0160:0x8A,0x2039:0x8B,0x0152:0x8C,
+  0x017D:0x8E,0x2018:0x91,0x2019:0x92,0x201C:0x93,0x201D:0x94,0x2022:0x95,
+  0x2013:0x96,0x2014:0x97,0x02DC:0x98,0x2122:0x99,0x0161:0x9A,0x203A:0x9B,
+  0x0153:0x9C,0x017E:0x9E,0x0178:0x9F
+};
+
+// When ADODB.Stream and XMLHTTP are both blocked (e.g. a freshly downloaded
+// .hta still carrying the Mark-of-the-Web), readTextFile falls back to the FSO
+// reader, which decodes bytes through the system codepage. A UTF-8 file then
+// arrives with every multibyte character split into Windows-1252 chars — e.g.
+// "→" (E2 86 92) shows up as "â†’". This re-reads that string as the UTF-8
+// bytes it really was. Pure-ASCII text passes through unchanged, so it is only
+// ever applied on the fallback path where we KNOW the bytes came in as ANSI.
+function repairUtf8FromAnsi(s) {
+  if (!s) return s;
+  var bytes = [], i, c;
+  for (i = 0; i < s.length; i++) {
+    c = s.charCodeAt(i);
+    if (c <= 0xFF) bytes.push(c);
+    else if (CP1252_REV[c] !== undefined) bytes.push(CP1252_REV[c]);
+    else if (c < 0x800) { bytes.push(0xC0|(c>>6)); bytes.push(0x80|(c&0x3F)); }
+    else { bytes.push(0xE0|(c>>12)); bytes.push(0x80|((c>>6)&0x3F)); bytes.push(0x80|(c&0x3F)); }
+  }
+  var out = "", j = 0, n = bytes.length, b0;
+  while (j < n) {
+    b0 = bytes[j];
+    if (b0 < 0x80) { out += String.fromCharCode(b0); j += 1; }
+    else if ((b0&0xE0)===0xC0 && j+1<n && (bytes[j+1]&0xC0)===0x80) {
+      out += String.fromCharCode(((b0&0x1F)<<6)|(bytes[j+1]&0x3F)); j += 2;
+    }
+    else if ((b0&0xF0)===0xE0 && j+2<n && (bytes[j+1]&0xC0)===0x80 && (bytes[j+2]&0xC0)===0x80) {
+      out += String.fromCharCode(((b0&0x0F)<<12)|((bytes[j+1]&0x3F)<<6)|(bytes[j+2]&0x3F)); j += 3;
+    }
+    else if ((b0&0xF8)===0xF0 && j+3<n && (bytes[j+1]&0xC0)===0x80 && (bytes[j+2]&0xC0)===0x80 && (bytes[j+3]&0xC0)===0x80) {
+      var cp = ((b0&0x07)<<18)|((bytes[j+1]&0x3F)<<12)|((bytes[j+2]&0x3F)<<6)|(bytes[j+3]&0x3F);
+      cp -= 0x10000;
+      out += String.fromCharCode(0xD800|(cp>>10), 0xDC00|(cp&0x3FF)); j += 4;
+    }
+    else { out += String.fromCharCode(b0); j += 1; }   // invalid/truncated — keep byte
+  }
+  return out;
+}
+
+// Write UTF-8, mirroring readTextFile's tiers: ADODB.Stream first (real UTF-8
+// bytes, survives the MOTW zone block), FSO as a last resort. Keeps preset
+// names / descriptions with arrows and "×" round-tripping correctly on save.
+function writeTextFile(path, text) {
+  try {
+    var st = new ActiveXObject("ADODB.Stream");
+    st.Type = 2;              // adTypeText
+    st.Charset = "utf-8";
+    st.Open();
+    st.WriteText(text);
+    st.SaveToFile(path, 2);   // adSaveCreateOverWrite
+    st.Close();
+    return true;
+  } catch(e1) { /* fall back to FSO (system codepage) */ }
+  var f = fso.CreateTextFile(path, true, false);
+  f.Write(text); f.Close();
+  return true;
+}
+
 function readTextFile(path) {
   var lastErr = null;
   // 1) ADODB.Stream as UTF-8 -- unaffected by the Mark-of-the-Web zone block.
@@ -1310,14 +1421,13 @@ function readTextFile(path) {
     xhr.send();
     return xhr.responseText;
   } catch(e2) { lastErr = e2; }
-  // 3) Last resort: FileSystemObject (system ANSI). Fine for the ASCII files;
-  //    presets.json's non-ASCII glyphs would only be affected here, and only if
-  //    both methods above were unavailable.
+  // 3) Last resort: FileSystemObject. This reads through the system codepage,
+  //    so a UTF-8 file comes back mangled — repairUtf8FromAnsi undoes that.
   try {
     var f = fso.OpenTextFile(path, 1, false);
     var t3 = f.AtEndOfStream ? "" : f.ReadAll();
     f.Close();
-    return t3;
+    return repairUtf8FromAnsi(t3);
   } catch(e3) { lastErr = e3; }
   throw lastErr;
 }
@@ -1340,8 +1450,7 @@ function saveSettings() {
     var fkeys = [];
     for (var k in favourites) { if (favourites[k]) fkeys.push('"'+k+'":true'); }
     var json = '{"theme":"'+currentTheme+'","scale":'+currentScale+',"favourites":{'+fkeys.join(",")+'}}';
-    var f = fso.CreateTextFile(settingsPath(), true, false);
-    f.Write(json); f.Close();
+    writeTextFile(settingsPath(), json);
   } catch(e) {}
 }
 
@@ -1437,8 +1546,7 @@ function saveCustomPresets() {
         + ',"args":' + jsonStr(c.args) + '}');
     }
     var json = items.length ? "[\n  " + items.join(",\n  ") + "\n]" : "[]";
-    var f = fso.CreateTextFile(customPath(), true, false);
-    f.Write(json); f.Close();
+    writeTextFile(customPath(), json);
   } catch(e) { alert("Could not save custom templates:\n" + e.message); }
 }
 function jsonStr(s) {
@@ -1577,7 +1685,114 @@ function renderPresets() {
 
 function selectPresetById(id) {
   var p = findPreset(id);
-  if (p) selectPreset(p);
+  if (p) applyPresetSelection(p);
+}
+
+// Clicking a preset in the list always sets it as the active preset (the
+// highlight + what NEW imports inherit). What it does to EXISTING pending jobs
+// depends on how many are queued:
+//   0 pending  -> nothing to repaint; the default is set for the next import
+//   1 pending  -> apply immediately, no prompt
+//   >1 pending -> ask: all pending, or only the selected ones
+function applyPresetSelection(p) {
+  selectedPreset = p;
+  renderPresets();
+  updateRunButton();
+
+  var pend = [];
+  for (var i=0;i<jobs.length;i++) { if(jobs[i].status==="pending") pend.push(jobs[i]); }
+
+  if (pend.length === 0) return;                 // default set for next import
+  if (pend.length === 1) {                        // single job -> instant
+    pend[0].preset = p;
+    renderJobs(); updateTally();
+    return;
+  }
+  // More than one pending -> confirm the scope.
+  var sel = [];
+  for (var j=0;j<pend.length;j++) { if(pend[j].selected) sel.push(pend[j]); }
+  showApplyPresetModal(p, pend, sel);
+}
+
+function applyPresetToJobs(p, list) {
+  for (var i=0;i<list.length;i++) { list[i].preset = p; }
+  renderJobs(); updateTally();
+}
+
+// Per-job selection toggle (drives the "only selected" apply scope). Only
+// pending jobs are re-assignable, so only they carry a checkbox.
+function toggleJobSelected(id) {
+  for (var i=0;i<jobs.length;i++) {
+    if (jobs[i].id===id) {
+      if (jobs[i].status!=="pending") return;
+      jobs[i].selected = !jobs[i].selected;
+      renderJobs();
+      return;
+    }
+  }
+}
+
+// ── Apply-preset scope modal ────────────────────────────
+var pendingApply = null;   // {preset, all:[...], sel:[...]}
+
+function showApplyPresetModal(preset, pendingList, selectedList) {
+  pendingApply = { preset: preset, all: pendingList, sel: selectedList };
+  var t = getT();
+  var ov  = document.getElementById("apply-overlay");
+  var box = document.getElementById("apply-box");
+  if (!ov) { // safety: no modal in DOM -> fall back to applying to all
+    applyPresetToJobs(preset, pendingList); pendingApply=null; return;
+  }
+  var nAll = pendingList.length, nSel = selectedList.length;
+
+  box.style.background  = t.surf;
+  box.style.borderColor = t.bordHi;
+  box.style.color       = t.text;
+
+  var title = document.getElementById("apply-title");
+  title.style.color = t.ac;
+  title.innerText = "Apply preset to pending jobs?";
+
+  var body = document.getElementById("apply-body");
+  body.style.color = t.muted;
+  body.innerHTML =
+      '<b style="color:'+t.text+'">'+esc(preset.name)+'</b><br>'
+    + 'You have '+nAll+' pending job'+(nAll===1?'':'s')+'. '
+    + 'Apply this preset to all of them, or only the '
+    + '<b style="color:'+t.text+'">'+nSel+'</b> currently selected?'
+    + (nSel===0 ? '<br><span style="color:'+t.err+'">No jobs are selected.</span>' : '');
+
+  var bAll = document.getElementById("apply-all");
+  bAll.style.borderColor = t.ac; bAll.style.color = t.ac; bAll.style.background="none";
+  bAll.innerHTML = "Apply to all (" + nAll + ")";
+
+  var bSel = document.getElementById("apply-selected");
+  bSel.innerHTML = "Only selected (" + nSel + ")";
+  if (nSel === 0) {
+    bSel.disabled = true;
+    bSel.style.borderColor = t.bord; bSel.style.color = t.bord; bSel.style.background="none";
+  } else {
+    bSel.disabled = false;
+    bSel.style.borderColor = t.ac; bSel.style.color = t.ac; bSel.style.background="none";
+  }
+
+  var bCancel = document.getElementById("apply-cancel");
+  bCancel.style.borderColor = t.bord; bCancel.style.color = t.muted; bCancel.style.background="none";
+
+  ov.style.display = "block";
+}
+function closeApplyModal() {
+  var ov = document.getElementById("apply-overlay");
+  if (ov) ov.style.display = "none";
+  pendingApply = null;
+}
+function confirmApplyAll() {
+  if (pendingApply) applyPresetToJobs(pendingApply.preset, pendingApply.all);
+  closeApplyModal();
+}
+function confirmApplySelected() {
+  if (pendingApply && pendingApply.sel.length) applyPresetToJobs(pendingApply.preset, pendingApply.sel);
+  closeApplyModal();
 }
 
 function deleteCustom(id) {
@@ -1949,7 +2164,7 @@ function dropViaShell() {
 function addFile(fileObj) {
   var fp=fileObj.path||fileObj.name;
   if(!fp||(fp===fileObj.name&&fp.indexOf("\\")<0))return;
-  jobs.push({id:++jobCounter,inputPath:fp,filename:fileObj.name,preset:selectedPreset,status:"pending",log:"",outputPath:""});
+  jobs.push({id:++jobCounter,inputPath:fp,filename:fileObj.name,preset:selectedPreset,selected:true,status:"pending",log:"",outputPath:""});
 }
 function browseFiles() {
   // Use the PowerShell picker: true multi-select, proper filter, and no
@@ -2192,7 +2407,7 @@ function addInputFile(path) {
         seqFolder: seq.folder,
         seqBase: seq.prefix || "sequence",
         ext: seq.ext,
-        preset: selectedPreset, status: "pending", log: "", outputPath: ""
+        preset: selectedPreset, selected: true, status: "pending", log: "", outputPath: ""
       };
       jobs.push(seqJob);
       scheduleProbe(seqJob);
@@ -2200,7 +2415,7 @@ function addInputFile(path) {
     }
   }
   var newJob = { id: ++jobCounter, inputPath: path, filename: fso.GetFileName(path),
-              preset: selectedPreset, status: "pending", log: "", outputPath: "" };
+              preset: selectedPreset, selected: true, status: "pending", log: "", outputPath: "" };
   jobs.push(newJob);
   scheduleProbe(newJob);
   return true;
@@ -2215,7 +2430,10 @@ function runNext(pending,idx) {
     updateRunButton(); return;
   }
   var job=pending[idx];
-  job.preset=selectedPreset; job.outputPath=buildOutputPath(job);
+  // Each job runs with its OWN assigned preset (set at import / via the preset
+  // list). Only fall back to the active preset if a job somehow has none.
+  if (!job.preset) job.preset=selectedPreset;
+  job.outputPath=buildOutputPath(job);
   job.status="running"; job.log="";
   renderJobs(); updateTally();
   var tmp=wsh.ExpandEnvironmentStrings("%TEMP%");
@@ -2408,17 +2626,49 @@ function cleanup(bat,log) {
   try{if(fso.FileExists(bat))fso.DeleteFile(bat);}catch(e){}
   try{if(fso.FileExists(log))fso.DeleteFile(log);}catch(e){}
 }
+// Kill ONLY the ffmpeg process belonging to this job, and do it synchronously
+// so the process is actually gone before we advance the queue or delete the
+// partial output. The old code fired "taskkill /IM ffmpeg.exe" async and did
+// not wait — so the queue would move on (and even launch the next job) while
+// the killed ffmpeg was still winding down, which is why an aborted job could
+// appear to keep converting. We match on the job's unique output path in the
+// process command line via WMI, so sibling jobs are never touched. If WMI is
+// unavailable (locked-down box), fall back to a synchronous broad kill.
+function killJobProcess(job) {
+  var killed = false;
+  try {
+    var wmi = GetObject("winmgmts:\\\\.\\root\\cimv2");
+    var procs = wmi.ExecQuery("SELECT ProcessId,CommandLine FROM Win32_Process WHERE Name='ffmpeg.exe'");
+    var e = new Enumerator(procs);
+    for (; !e.atEnd(); e.moveNext()) {
+      var pr = e.item();
+      var cl = pr.CommandLine || "";
+      if (job.outputPath && cl.indexOf(job.outputPath) >= 0) {
+        try { pr.Terminate(); killed = true; } catch(_){}
+      }
+    }
+  } catch(wmiErr) { /* WMI blocked — use fallback below */ }
+  if (!killed) {
+    // Last resort: broad kill, but WAIT for it so we don't race the queue.
+    try { wsh.Run("taskkill /F /IM ffmpeg.exe",0,true); killed = true; } catch(_){}
+  }
+  return killed;
+}
 function stopAll() {
   stopRequested=true;
-  try{wsh.Run("taskkill /F /IM ffmpeg.exe",0,false);}catch(e){}
+  // "Stop all" -> broad kill is intended; wait so everything is down before
+  // the poll loop tears the queue down.
+  try{wsh.Run("taskkill /F /IM ffmpeg.exe",0,true);}catch(e){}
 }
 function abortJob(id) {
   // Abort just this running job, then carry on with the rest of the queue.
   for(var i=0;i<jobs.length;i++){
     if(jobs[i].id===id && jobs[i].status==="running"){
       jobs[i].aborted=true;
-      // Only one ffmpeg runs at a time, so killing the process kills this job.
-      try{wsh.Run("taskkill /F /IM ffmpeg.exe",0,false);}catch(e){}
+      // Synchronous, scoped kill: the job's ffmpeg is dead on return, so the
+      // running pollJob loop will see .aborted on its next tick and cleanly
+      // cancel this job + advance, with no orphaned process left running.
+      killJobProcess(jobs[i]);
       return;
     }
   }
@@ -2496,6 +2746,18 @@ function ffmpegErrorReason(log) {
     }
   }
   return "Conversion failed - see log for details.";
+}
+
+// Mouse-wheel scrolling for the queue. Wheel-over-nested-overflow can be
+// unreliable in HTAs, so drive scrollTop directly and cancel the default so it
+// never double-scrolls. wheelDelta is +120 per notch up / -120 down.
+function queueWheel() {
+  var e = window.event;
+  var q = document.getElementById("queue-wrap");
+  if (!q || !e) return true;
+  q.scrollTop -= (e.wheelDelta / 120) * 40;
+  e.returnValue = false;
+  return false;
 }
 
 function renderJobs() {
@@ -2614,8 +2876,23 @@ function renderJobs() {
       } catch(_) {}
     }
 
+    // ── Selection checkbox (pending jobs only; others get an aligned spacer) ──
+    var checkCell;
+    if (job.status==="pending") {
+      var on = !!job.selected;
+      checkCell = '<td class="job-check-cell">'
+        + '<span class="job-check" onclick="toggleJobSelected('+job.id+');event.cancelBubble=true" '
+        + 'title="'+(on?"Selected \u2014 in scope for \u2018only selected\u2019":"Not selected \u2014 click to include")+'" '
+        + 'style="border-color:'+(on?t.ac:t.bord)+';background:'+(on?t.ac:"none")+';color:'+(on?t.acText:t.muted)+';">'
+        + (on?"\u2713":"")
+        + '</span></td>';
+    } else {
+      checkCell = '<td class="job-check-cell"></td>';
+    }
+
     html+='<div class="job-row" style="background:'+t.surf+';border-color:'+bordCol+'">'
         +'<div class="job-top"><table width="100%"><tr>'
+        +checkCell
         +'<td class="job-name-cell"><div class="job-filename" title="'+esc(job.inputPath)+'" style="color:'+t.text+'">'+esc(job.filename)+'</div>'
         +'<div class="job-meta" style="color:'+t.muted+'">'+meta+'</div></td>'
         +'<td class="job-right"><span class="job-status" style="color:'+statusCol+';border-color:'+statusCol+'">'+job.status.toUpperCase()+'</span>'
