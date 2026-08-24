@@ -24,9 +24,9 @@ body {
   overflow: hidden;
 }
 
-/* Fixed-size root that gets zoomed for the UI-scale feature. All regions
-   are positioned relative to THIS box (980x700), so zoom scales the whole
-   layout uniformly without the viewport double-counting that broke 2x. */
+/* The root starts at the normal 980x700 design size. The resize handler grows
+   it to the available client area (or uniformly shrinks it on smaller/DPI-
+   scaled screens), while keeping the user's 1x/1.5x/2x UI zoom intact. */
 #app-root {
   position: absolute;
   top: 0; left: 0;
@@ -37,7 +37,7 @@ body {
 /* Animated background canvas sits behind the UI. The header/sidebar/toolbar
    paint their own opaque fills on top; the main panel is transparent, so the
    drifting themed glow shows through the drop-zone / queue area. */
-#bg-canvas { position: absolute; top: 0; left: 0; width: 980px; height: 700px; z-index: 0; }
+#bg-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; }
 #header, #body-wrap, #toolbar { z-index: 1; }
 
 /* Stylised popups: soft rounded corners + drop shadow (JS drives the bounce). */
@@ -50,7 +50,7 @@ body {
 #header {
   position: absolute;
   top: 0; left: 0;
-  width: 980px; height: 42px;
+  width: 100%; height: 42px;
   display: table;
 }
 #header-inner { display:table-row; width:100%; }
@@ -77,21 +77,21 @@ body {
 #toolbar {
   position: absolute;
   bottom: 0; left: 0;
-  width: 980px; height: 46px;
+  width: 100%; height: 46px;
 }
 
-/* ── Body layout (between header and toolbar: 700-42-46 = 612) ── */
+/* ── Body layout (runtime height = root - header - toolbar) ── */
 #body-wrap {
   position: absolute;
   top: 42px; left: 0;
-  width: 980px; height: 612px;
+  width: 100%; height: 612px;
 }
 
 /* ── Sidebar ── */
 #sidebar {
   position: absolute;
   top: 0; left: 0;
-  width: 240px; height: 612px;
+  width: 240px; height: 100%;
   overflow: hidden;
   border-right-width: 1px; border-right-style: solid;
 }
@@ -152,7 +152,7 @@ body {
 /* Template editor modal */
 #editor-overlay {
   display: none; position: absolute;
-  top: 0; left: 0; width: 980px; height: 700px;
+  top: 0; left: 0; width: 100%; height: 100%;
   z-index: 200;
   background: rgba(0,0,0,0.55);
 }
@@ -195,7 +195,7 @@ body {
 #main-panel {
   position: absolute;
   top: 0; left: 240px;
-  width: 740px; height: 612px;
+  right: 0; width: 740px; height: 100%;
   overflow: hidden;
 }
 #dropzone {
@@ -233,11 +233,10 @@ body {
 /* Queue */
 #queue-wrap {
   position: absolute;
-  /* Explicit height (not top+bottom) so the container is bounded in quirks
-     mode — otherwise it grows to fit its content, overflows the panel and gets
-     clipped with no scrollbar. 612 (panel) - 174 (top) = 438. */
+  /* JS keeps an explicit height because top+bottom is unreliable in HTA
+     quirks mode. It is recalculated whenever the client area changes. */
   top: 174px; left: 0;
-  width: 740px; height: 438px;
+  right: 0; width: 740px; height: 438px;
   margin: 0; padding: 0 12px;
   overflow-y: auto;
 }
@@ -386,7 +385,7 @@ body {
 /* ── Inspect modal ── */
 #inspect-overlay {
   display: none; position: absolute;
-  top: 0; left: 0; width: 980px; height: 700px;
+  top: 0; left: 0; width: 100%; height: 100%;
   z-index: 300;
   background: rgba(0,0,0,0.6);
 }
@@ -427,7 +426,7 @@ body {
 /* ── Apply-preset scope modal ── */
 #apply-overlay {
   display: none; position: absolute;
-  top: 0; left: 0; width: 980px; height: 700px;
+  top: 0; left: 0; width: 100%; height: 100%;
   z-index: 320; background: rgba(0,0,0,0.6);
 }
 #apply-box {
@@ -853,9 +852,8 @@ function easeOutBack(t) {
 var bgAnim = (function() {
   var cv=null, ctx=null, timer=null, started=false, enabled=true;
   var W=980, H=700, pattern="ambient";
-  // The animated canvas spans the whole 980px app, but the left 240px sidebar
-  // is opaque. Centre focal effects in the visible 740px main panel instead
-  // of the full canvas: 240 + (740 / 2) = 610px.
+  // The canvas follows the responsive app root. The left 240px sidebar stays
+  // fixed, so focal effects are centred in the remaining main panel.
   var VISUAL_LEFT=240, VISUAL_W=W-VISUAL_LEFT;
   function visualCenterX(){ return VISUAL_LEFT + VISUAL_W/2; }
 
@@ -1651,11 +1649,34 @@ var bgAnim = (function() {
   }
   function stopRunning(){ if(timer){ clearInterval(timer); timer=null; } }
 
+  // Resize both the canvas bitmap and the animation's coordinate space. Merely
+  // stretching the original 980x700 bitmap would distort effects on ultrawide
+  // screens, so layout changes update the real drawing surface instead.
+  function resize(w,h){
+    w=Math.max(1,Math.round(w)); h=Math.max(1,Math.round(h));
+    if(w===W && h===H) return;
+    W=w; H=h; VISUAL_W=Math.max(1,W-VISUAL_LEFT);
+    if(!cv) cv=document.getElementById("bg-canvas");
+    if(cv){
+      cv.style.width=W+"px"; cv.style.height=H+"px";
+      cv.width=W; cv.height=H;
+      try{ ctx=cv.getContext ? cv.getContext("2d") : null; }catch(e){ ctx=null; }
+    }
+    if(domLayer){
+      domLayer.style.width=W+"px"; domLayer.style.height=H+"px";
+    }
+    if(ctx) initPattern();
+  }
+
   function start(){
     if(started) return; started=true;
     if(!pal) pal=palFrom(THEMES.amber);
     cv=document.getElementById("bg-canvas");
-    if(cv){ try{ ctx = cv.getContext ? cv.getContext("2d") : null; }catch(e){ ctx=null; } }
+    if(cv){
+      cv.style.width=W+"px"; cv.style.height=H+"px";
+      cv.width=W; cv.height=H;
+      try{ ctx = cv.getContext ? cv.getContext("2d") : null; }catch(e){ ctx=null; }
+    }
     if(ctx) initPattern();
     if(enabled) ensureRunning();
     else if(cv) cv.style.display="none";
@@ -1668,7 +1689,7 @@ var bgAnim = (function() {
   }
   function setPattern(id){ pattern=id; if(ctx) initPattern(); }
 
-  return { start:start, setColors:setColors, setEnabled:setEnabled, setPattern:setPattern };
+  return { start:start, resize:resize, setColors:setColors, setEnabled:setEnabled, setPattern:setPattern };
 })();
 
 // Scale a centred box from its own centre (used for the popup bounce). Uses the
@@ -2370,14 +2391,15 @@ function styleSettingsBtn(id, t) {
 function getT() { return THEMES[currentTheme] || THEMES.amber; }
 
 var BASE_W = 980, BASE_H = 700;
+var HEADER_H = 42, TOOLBAR_H = 46, SIDEBAR_W = 240, QUEUE_TOP = 174;
 var lastClientW = 0, lastClientH = 0;
 
 // Keep the user's selected UI zoom (1x / 1.5x / 2x) as the REAL IE zoom.
 // HTA/IE hit-testing is reliable with that normal zoom, but can become offset if
 // we replace it with an arbitrary per-monitor zoom value.  When Windows changes
 // the client-pixel size while crossing monitors with different DPI, compensate
-// only for that extra ratio with a CSS transform.  IE maps pointer coordinates
-// through transforms correctly, so the top-right header buttons stay clickable.
+// only when the selected zoom cannot fit. Larger/maximized windows receive a
+// genuinely larger layout instead of a cropped, enlarged 980x700 layout.
 function fitAppRootToViewport(force) {
   try {
     var haveW = document.body.clientWidth  || document.documentElement.clientWidth  || 0;
@@ -2386,24 +2408,52 @@ function fitAppRootToViewport(force) {
     if (!force && haveW === lastClientW && haveH === lastClientH) return;
     lastClientW = haveW; lastClientH = haveH;
 
-    var sx = haveW / BASE_W;
-    var sy = haveH / BASE_H;
-    var targetScale = (sx > sy) ? sx : sy;
-    if (targetScale < 0.25) targetScale = 0.25;
-    if (targetScale > 4) targetScale = 4;
-
     var root = document.getElementById("app-root");
     if (!root) return;
 
-    // Preserve the ordinary UI zoom selected in Settings.  This is the same
-    // zoom path that was already working correctly for buttons at 1.5x / 2x.
-    root.style.zoom = currentScale;
+    // Use the requested zoom whenever it fits. If the window/monitor is smaller,
+    // shrink uniformly just enough to keep every edge reachable. The logical
+    // root then expands to fill any remaining width or height, which gives wide
+    // full-screen windows real queue space instead of clipping the bottom.
+    var effectiveScale = currentScale;
+    var fitW = haveW / BASE_W, fitH = haveH / BASE_H;
+    if (effectiveScale > fitW) effectiveScale = fitW;
+    if (effectiveScale > fitH) effectiveScale = fitH;
+    if (effectiveScale < 0.10) effectiveScale = 0.10;
 
-    // Only the monitor/DPI mismatch is applied as a transform.  On the monitor
-    // where the requested window size maps normally this is exactly scale(1).
-    var monitorScale = targetScale / currentScale;
-    if (monitorScale < 0.25) monitorScale = 0.25;
-    if (monitorScale > 4) monitorScale = 4;
+    var layoutW = Math.max(BASE_W, Math.round(haveW / effectiveScale));
+    var layoutH = Math.max(BASE_H, Math.round(haveH / effectiveScale));
+    var bodyH   = Math.max(1, layoutH - HEADER_H - TOOLBAR_H);
+    var mainW   = Math.max(1, layoutW - SIDEBAR_W);
+    var queueH  = Math.max(1, bodyH - QUEUE_TOP);
+
+    root.style.zoom = currentScale;
+    root.style.width = layoutW + "px";
+    root.style.height = layoutH + "px";
+
+    function size(id,w,h) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      if (w !== null) el.style.width = Math.max(1,w) + "px";
+      if (h !== null) el.style.height = Math.max(1,h) + "px";
+    }
+    size("header",         layoutW, null);
+    size("toolbar",        layoutW, null);
+    size("body-wrap",      layoutW, bodyH);
+    size("sidebar",        SIDEBAR_W, bodyH);
+    size("main-panel",     mainW, bodyH);
+    size("queue-wrap",     mainW, queueH);
+    size("editor-overlay", layoutW, layoutH);
+    size("inspect-overlay",layoutW, layoutH);
+    size("apply-overlay",  layoutW, layoutH);
+
+    var settings = document.getElementById("settings-panel");
+    if (settings) settings.style.maxHeight = Math.max(120,layoutH-HEADER_H) + "px";
+    bgAnim.resize(layoutW,layoutH);
+
+    // The transform is only the fit/DPI correction; the normal UI zoom remains
+    // on root.style.zoom so HTA pointer hit-testing stays aligned.
+    var monitorScale = effectiveScale / currentScale;
     var tr = "scale(" + monitorScale + ")";
     root.style.msTransformOrigin = "0 0";
     root.style.transformOrigin = "0 0";
@@ -2431,8 +2481,8 @@ function applyScale(n) {
     window.resizeTo(w, h);
   } catch(_) {}
 
-  // Let Windows finish the resize/DPI negotiation, then make the design fill
-  // whatever client area resulted. No moveTo/resizeTo happens in this path.
+  // Let Windows finish the resize/DPI negotiation, then lay out whatever client
+  // area resulted. No moveTo/resizeTo happens in this path.
   fitAppRootToViewport(true);
   window.setTimeout(function(){ fitAppRootToViewport(true); }, 60);
 
@@ -2449,9 +2499,8 @@ function applyScale(n) {
   saveSettings();
 }
 
-// React immediately to a monitor/DPI client-size change, but only by changing
-// CSS zoom. A lightweight watcher also catches mshta/IE monitor transitions that
-// do not reliably emit a resize event. It does nothing unless client size changed.
+// React immediately to maximize/restore and monitor/DPI client-size changes. A
+// lightweight watcher also catches mshta/IE transitions that miss resize events.
 window.onresize = function(){ fitAppRootToViewport(false); };
 var viewportWatchTimer = window.setInterval(function(){ fitAppRootToViewport(false); }, 120);
 
