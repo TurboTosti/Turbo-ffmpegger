@@ -1,93 +1,92 @@
-# FFmpeg Batch — Portable
+Turbo ffmpegger - Portable
+Version 0.5
 
-No installation required. Works on any Windows PC.
+No installation is required. Turbo ffmpegger uses the Windows PowerShell and
+.NET components that are included with Windows.
 
----
+SETUP
 
-## Setup
+1. Keep the Data folder together with Launcher.bat.
+2. Keep ffmpeg.exe and ffprobe.exe in Data, next to Turbo ffmpegger.hta.
+3. Double-click Launcher.bat.
 
-1. Drop `ffmpeg.exe` and `ffprobe.exe` into the data folder (next to the .hta file)
-   - Download: https://www.gyan.dev/ffmpeg/builds/
-   - Get "ffmpeg-release-essentials.zip", extract, find ffmpeg.exe and ffprobe.exe in the bin\ folder
+If ffmpeg.exe or ffprobe.exe is missing, download an FFmpeg Windows build and
+place both files in Data. One source is:
+https://www.gyan.dev/ffmpeg/builds/
 
-2. Double-click the launcher.bat or **FFmpeg Batch.hta** — that's it
+ADDING INPUT FILES
 
----
+You can add video, audio and supported image files in any of these ways:
 
-## Usage
+- Drag files from File Explorer onto the drop zone.
+- Drag a COMPLETED download from Chrome's or Firefox's Downloads list onto the
+  drop zone.
+- Click Browse files and select one or more files.
 
-1. Pick a **preset** from the left panel
-2. **Drag & drop** video files onto the drop zone (or click Browse)
-3. Optionally set a custom **output folder** — otherwise files go into an `output\` subfolder next to each input
-4. Click  "Convert"
+A browser download must be finished and the downloaded file must still exist
+on disk. Turbo ffmpegger does not download web links.
 
----
+Run Turbo ffmpegger and the browser at the same Windows privilege level.
+Normally this means running both normally, not "as administrator". Windows
+blocks drag-and-drop from a normal browser into an elevated application.
 
-## Adding your own presets
+USAGE
 
-Open `presets.json` in Notepad (or click "Edit presets.json" in the app).
+1. Pick a preset in the left panel.
+2. Add one or more input files.
+3. Optionally choose an output folder. Otherwise output is written to an
+   output subfolder next to each input file.
+4. Click Convert.
 
-Each entry looks like:
+DOWNLOAD SECURITY / UNBLOCKING
 
-```json
-{
-  "id":          "unique-id",
-  "name":        "Name shown in the list",
-  "description": "Short description",
-  "outputExt":   "mp4",
-  "args":        "-c:v libx264 -preset veryfast -crf 18 -c:a aac -b:a 128k"
-}
-```
+If Windows refuses to open the portable app, right-click the downloaded ZIP
+before extracting it, choose Properties, tick Unblock, and then extract again.
+If it was already extracted, unblock the files in the extracted folder.
 
-The `args` field is copied directly from your .bat files — just remove the
-`-i "input"` and the output filename, keep everything in between.
+NATIVE DROP RECEIVER
 
-Click **↺ Reload presets** in the app to pick up changes without restarting.
+drop_receiver.ps1 is the small local helper that enables reliable Explorer,
+Chrome and Firefox drops. It:
 
----
+- accepts only existing local files supplied by the Windows drop operation;
+- never downloads URLs and never contacts the network;
+- runs hidden only while Turbo ffmpegger is open;
+- uses a private temporary queue and removes it when the app closes.
 
-## Folder contents
+If the drop helper cannot start, Browse continues to work and the drop-zone
+subtitle reports that the helper is unavailable.
 
-```
-FFmpeg Batch.hta   ← double-click to launch
-presets.json       ← edit to add/change conversion presets
-ffmpeg.exe         ← drop here (download separately, see above)
-README.txt         ← this file
-```
+FOLDER CONTENTS
 
----
+Launcher.bat                         starts the app
+Data\Turbo ffmpegger.hta             main application
+Data\Turbo ffmpegger.ico             application window/taskbar icon
+Data\drop_receiver.ps1               native Explorer/browser drop support
+Data\pick_files.ps1                  multi-file Browse dialog
+Data\pick_folder.ps1                 output-folder dialog
+Data\presets.json                    built-in conversion presets
+Data\custom_presets.json             your custom presets
+Data\settings.json                   saved appearance/settings, if present
+Data\ffmpeg.exe                      converter
+Data\ffprobe.exe                     media information reader
 
-## Smart format filtering
+CUSTOM PRESETS
 
-When you add files, the preset list automatically narrows to formats
-compatible with what you dropped (e.g. an MP4 shows MP4 presets plus GIF,
-audio, ProRes, etc.). Toggle "Compatible only" in the left panel off to see
-every preset regardless of input.
+Use "+ New custom template", the pencil button on a preset, or open
+presets.json. custom_presets.json stores templates made in the app. Use
+"Reload presets" after editing JSON outside the app.
 
-## Custom templates
+The preset args field is passed to FFmpeg between the input and output paths.
+Only use arguments you trust.
 
-- Click the pencil (edit) icon on any preset to open the editor. Adjust the
-  name, input/output format, resolution, compression (CRF), encode speed,
-  codecs and audio bitrate, then "Save as custom template".
-- Custom templates appear under the "Custom" group with edit and delete (x)
-  buttons. They are stored in custom_presets.json next to the app.
-- Use "+ New custom template" in the Custom group to build one from scratch.
+IMAGE SEQUENCES
 
+To convert a numbered image sequence such as frame_0001.png:
 
----
+1. Pick an "Image Sequence -> ..." preset.
+2. Add any one frame from the sequence.
+3. Turbo ffmpegger detects consecutive frames and queues them as one job.
+4. Click Convert.
 
-## Image sequences
-
-To turn a numbered image sequence (e.g. frame_0001.png, frame_0002.png, ...)
-into a video:
-
-1. Pick an "Image Sequence -> ..." preset from the list.
-2. Drag in (or Browse to) ANY single frame from the sequence.
-3. The app auto-detects the filename pattern, the start number and how many
-   consecutive frames exist in that folder, and shows it as one job
-   (e.g. "frame_####.png  (1853 frames from 3680)").
-4. Click Convert. The whole sequence is stitched into one video.
-
-Works with padded (frame_0001) and non-padded (img1, img2 ...) numbering, and
-with png/jpg/bmp/tga/tif/dpx/exr/webp. Frame rate is set by the preset (30 or
-60 fps); duplicate a preset and edit its FPS field for other rates.
+Supported sequence formats include png, jpg, bmp, tga, tif, dpx, exr and webp.

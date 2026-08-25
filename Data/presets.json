@@ -1,60 +1,565 @@
 [
-  {"id":"mp4-hq-576p","name":"→ MP4 HQ 576p","group":"MP4","inputExts":["*"],"description":"H.264 slow, CRF 14, AAC 128k, 1024×576","outputExt":"mp4","args":"-c:v libx264 -preset slow -crf 14 -c:a aac -b:a 128k -vf scale=1024:576"},
-  {"id":"mp4-hq-720p","name":"→ MP4 HQ 720p","group":"MP4","inputExts":["*"],"description":"H.264 slow, CRF 14, AAC 128k, 1280×720","outputExt":"mp4","args":"-c:v libx264 -preset slow -crf 14 -c:a aac -b:a 128k -vf scale=1280:720"},
-  {"id":"mp4-hq-1080p","name":"→ MP4 HQ 1080p","group":"MP4","inputExts":["*"],"description":"H.264 veryfast, CRF 14, AAC 128k, 1920×1080","outputExt":"mp4","args":"-c:v libx264 -preset veryfast -crf 14 -c:a aac -b:a 128k -vf scale=1920:1080"},
-  {"id":"mp4-hq-1440p","name":"→ MP4 HQ 1440p","group":"MP4","inputExts":["*"],"description":"H.264 veryfast, CRF 14, AAC 128k, 2560×1440","outputExt":"mp4","args":"-c:v libx264 -preset veryfast -crf 14 -c:a aac -b:a 128k -vf scale=2560:1440"},
-  {"id":"mp4-hq-2160p","name":"→ MP4 HQ 2160p (4K)","group":"MP4","inputExts":["*"],"description":"H.264 veryfast, CRF 14, AAC 128k, 3840×2160","outputExt":"mp4","args":"-c:v libx264 -preset veryfast -crf 14 -c:a aac -b:a 128k -vf scale=3840:2160"},
-  {"id":"mp4-hq-8k","name":"→ MP4 HQ 8K","group":"MP4","inputExts":["*"],"description":"H.264 veryfast, CRF 14, AAC 128k, 7680×4320","outputExt":"mp4","args":"-c:v libx264 -preset veryfast -crf 14 -c:a aac -b:a 128k -vf scale=7680:4320"},
-  {"id":"mp4-hq-original","name":"→ MP4 HQ (keep size)","group":"MP4","inputExts":["*"],"description":"H.264 slow, CRF 14, AAC 128k, original resolution","outputExt":"mp4","args":"-c:v libx264 -preset slow -crf 14 -c:a aac -b:a 128k"},
-  {"id":"mp4-mq-original","name":"→ MP4 MQ (keep size)","group":"MP4","inputExts":["*"],"description":"H.264 slow, CRF 20, AAC 128k, original resolution","outputExt":"mp4","args":"-c:v libx264 -preset slow -crf 20 -c:a aac -b:a 128k"},
-  {"id":"mp4-hq-1440p-square","name":"→ MP4 HQ 1440p Square","group":"MP4","inputExts":["*"],"description":"H.264 veryfast, CRF 14, AAC 128k, 1440×1440 square","outputExt":"mp4","args":"-c:v libx264 -preset veryfast -crf 14 -c:a aac -b:a 128k -vf scale=1440:1440"},
-  {"id":"mp4-vertical-1080","name":"→ MP4 Vertical 1080×1920","group":"MP4","inputExts":["*"],"description":"H.264 veryfast, CRF 16, AAC 128k, 9:16 portrait (reels/shorts)","outputExt":"mp4","args":"-c:v libx264 -preset veryfast -crf 16 -c:a aac -b:a 128k -vf scale=1080:1920"},
-  {"id":"mp4-lq","name":"→ MP4 LQ","group":"MP4","inputExts":["*"],"description":"H.264 slow, CRF 25, AAC 128k, 800×480","outputExt":"mp4","args":"-c:v libx264 -preset slow -crf 25 -c:a aac -b:a 128k -vf scale=800:480"},
-  {"id":"mp4-web-1080p","name":"→ MP4 Web Stream 1080p","group":"MP4","inputExts":["*"],"description":"H.264 fast, CRF 23, AAC 96k, faststart for web streaming","outputExt":"mp4","args":"-c:v libx264 -preset fast -crf 23 -c:a aac -b:a 96k -vf scale=1920:1080 -movflags +faststart"},
-  {"id":"mp4-h265-1080p","name":"→ MP4 H.265/HEVC 1080p","group":"MP4","inputExts":["*"],"description":"H.265 medium, CRF 22, AAC 128k, 1920×1080 (smaller files)","outputExt":"mp4","args":"-c:v libx265 -preset medium -crf 22 -tag:v hvc1 -c:a aac -b:a 128k -vf scale=1920:1080"},
-  {"id":"mp4-h265-original","name":"→ MP4 H.265/HEVC (keep size)","group":"MP4","inputExts":["*"],"description":"H.265 medium, CRF 24, AAC 128k, original resolution","outputExt":"mp4","args":"-c:v libx265 -preset medium -crf 24 -tag:v hvc1 -c:a aac -b:a 128k"},
-
-  {"id":"mkv-h264-original","name":"→ MKV H.264 (keep size)","group":"MKV","inputExts":["*"],"description":"H.264 slow, CRF 16, AAC 192k, original resolution","outputExt":"mkv","args":"-c:v libx264 -preset slow -crf 16 -c:a aac -b:a 192k"},
-  {"id":"mkv-h265-original","name":"→ MKV H.265/HEVC (keep size)","group":"MKV","inputExts":["*"],"description":"H.265 medium, CRF 22, AAC 192k, original resolution","outputExt":"mkv","args":"-c:v libx265 -preset medium -crf 22 -c:a aac -b:a 192k"},
-
-  {"id":"webm-vp9-1080p","name":"→ WebM VP9 1080p","group":"WebM","inputExts":["*"],"description":"VP9, CRF 31, Opus 128k, 1920×1080 (web)","outputExt":"webm","args":"-c:v libvpx-vp9 -crf 31 -b:v 0 -c:a libopus -b:a 128k -vf scale=1920:1080"},
-  {"id":"webm-vp9-original","name":"→ WebM VP9 (keep size)","group":"WebM","inputExts":["*"],"description":"VP9, CRF 33, Opus 128k, original resolution","outputExt":"webm","args":"-c:v libvpx-vp9 -crf 33 -b:v 0 -c:a libopus -b:a 128k"},
-
-  {"id":"avi-h264","name":"→ AVI H.264 1080p","group":"AVI","inputExts":["*"],"description":"H.264 in AVI container, CRF 14, AAC 128k, 1920×1080","outputExt":"avi","args":"-c:v libx264 -preset slow -crf 14 -c:a aac -b:a 128k -vf scale=1920:1080"},
-
-  {"id":"wmv-hq","name":"→ WMV HQ","group":"WMV","inputExts":["*"],"description":"MPEG-4 / WMV2, qscale 2 (high quality)","outputExt":"wmv","args":"-c:v msmpeg4 -qscale:v 2 -c:a wmav2"},
-  {"id":"wmv-mq","name":"→ WMV MQ","group":"WMV","inputExts":["*"],"description":"MPEG-4 / WMV2, qscale 5 (medium quality)","outputExt":"wmv","args":"-c:v msmpeg4 -qscale:v 5 -c:a wmav2"},
-  {"id":"wmv-lq","name":"→ WMV LQ","group":"WMV","inputExts":["*"],"description":"MPEG-4 / WMV2, 5Mbps bitrate (low quality)","outputExt":"wmv","args":"-c:v msmpeg4 -b:v 5M -c:a wmav2"},
-
-  {"id":"mov-25fps","name":"MOV → MOV 25fps","group":"MOV","description":"Rewrap MOV, force 25fps, copy streams where possible","outputExt":"mov","args":"-max_muxing_queue_size 400 -r 25"},
-  {"id":"mov-slow-1x5","name":"MOV → MOV Slow ×1.5","group":"MOV","description":"Slow video to 1.5× duration, audio pitched down to match","outputExt":"mov","args":"-max_muxing_queue_size 400 -filter:v setpts=1.5*PTS -filter:a atempo=0.667"},
-  {"id":"mov-slow-2x","name":"MOV → MOV Slow ×2","group":"MOV","description":"Slow video to 2× duration, audio pitched down to match","outputExt":"mov","args":"-max_muxing_queue_size 400 -filter:v setpts=2.0*PTS -filter:a atempo=0.5"},
-
-  {"id":"prores-proxy","name":"→ ProRes 422 Proxy","group":"Editing","inputExts":["*"],"description":"Apple ProRes 422 Proxy, PCM 16-bit — light editing files","outputExt":"mov","args":"-c:v prores_ks -profile:v 0 -c:a pcm_s16le"},
-  {"id":"prores-standard","name":"→ ProRes 422","group":"Editing","inputExts":["*"],"description":"Apple ProRes 422, PCM 16-bit — standard editing","outputExt":"mov","args":"-c:v prores_ks -profile:v 2 -c:a pcm_s16le"},
-  {"id":"prores-hq","name":"→ ProRes 422 HQ","group":"Editing","inputExts":["*"],"description":"Apple ProRes 422 HQ, PCM 24-bit — high quality editing","outputExt":"mov","args":"-c:v prores_ks -profile:v 3 -c:a pcm_s24le"},
-  {"id":"dnxhd-1080p","name":"→ DNxHD 1080p25","group":"Editing","inputExts":["*"],"description":"Avid DNxHD 120 Mbps, 1920×1080 @ 25fps, PCM audio","outputExt":"mov","args":"-c:v dnxhd -b:v 120M -vf scale=1920:1080,fps=25,format=yuv422p -c:a pcm_s16le"},
-
-  {"id":"gif-480p","name":"→ GIF 480px 15fps","group":"GIF","inputExts":["*"],"description":"Optimised palette GIF, 480px wide, 15fps","outputExt":"gif","args":"-vf fps=15,scale=480:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse -loop 0"},
-  {"id":"gif-720p","name":"→ GIF 720px 20fps","group":"GIF","inputExts":["*"],"description":"Optimised palette GIF, 720px wide, 20fps","outputExt":"gif","args":"-vf fps=20,scale=720:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse -loop 0"},
-  {"id":"gif-320p","name":"→ GIF 320px 12fps (tiny)","group":"GIF","inputExts":["*"],"description":"Small palette GIF, 320px wide, 12fps","outputExt":"gif","args":"-vf fps=12,scale=320:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse -loop 0"},
-
-  {"id":"audio-mp3-320","name":"→ MP3 320k","group":"Audio","inputExts":["*"],"description":"Extract audio as MP3 320kbps, strip video","outputExt":"mp3","args":"-vn -c:a libmp3lame -b:a 320k"},
-  {"id":"audio-mp3-192","name":"→ MP3 192k","group":"Audio","inputExts":["*"],"description":"Extract audio as MP3 192kbps, strip video","outputExt":"mp3","args":"-vn -c:a libmp3lame -b:a 192k"},
-  {"id":"audio-aac-256","name":"→ AAC / M4A 256k","group":"Audio","inputExts":["*"],"description":"Extract audio as AAC 256kbps, strip video","outputExt":"m4a","args":"-vn -c:a aac -b:a 256k"},
-  {"id":"audio-opus-128","name":"→ Opus 128k","group":"Audio","inputExts":["*"],"description":"Extract audio as Opus 128kbps (efficient), strip video","outputExt":"opus","args":"-vn -c:a libopus -b:a 128k"},
-  {"id":"audio-ogg-q5","name":"→ OGG Vorbis","group":"Audio","inputExts":["*"],"description":"Extract audio as OGG Vorbis (quality 5), strip video","outputExt":"ogg","args":"-vn -c:a libvorbis -qscale:a 5"},
-  {"id":"audio-flac","name":"→ FLAC (lossless)","group":"Audio","inputExts":["*"],"description":"Extract audio as lossless FLAC, strip video","outputExt":"flac","args":"-vn -c:a flac"},
-  {"id":"audio-wav","name":"→ WAV (PCM 16-bit)","group":"Audio","inputExts":["*"],"description":"Extract audio as uncompressed WAV PCM 16-bit","outputExt":"wav","args":"-vn -c:a pcm_s16le"},
-
-  {"id":"util-extract-poster","name":"Extract first frame → PNG","group":"Utility","inputExts":["*"],"description":"Save the very first frame as a PNG image","outputExt":"png","args":"-frames:v 1"},
-  {"id":"util-mute","name":"Remove audio (mute)","group":"Utility","inputExts":["*"],"description":"Re-encode video H.264 CRF 18, drop all audio","outputExt":"mp4","args":"-c:v libx264 -preset veryfast -crf 18 -an"},
-  {"id":"util-strip-fast","name":"Strip audio (no re-encode)","group":"Utility","inputExts":["*"],"description":"Keep video stream as-is, remove audio (fast copy)","outputExt":"mp4","args":"-c:v copy -an"},
-  {"id":"util-normalize-audio","name":"Normalize loudness → MP4","group":"Utility","inputExts":["*"],"description":"EBU R128 loudness normalize, H.264 CRF 18, AAC 192k","outputExt":"mp4","args":"-c:v libx264 -preset veryfast -crf 18 -af loudnorm -c:a aac -b:a 192k"},
-  {"id":"util-rotate-cw","name":"Rotate 90° clockwise → MP4","group":"Utility","inputExts":["*"],"description":"Rotate video 90° clockwise, H.264 CRF 18, AAC 128k","outputExt":"mp4","args":"-vf transpose=1 -c:v libx264 -preset veryfast -crf 18 -c:a aac -b:a 128k"},
-
-  {"id":"imgseq-mp4-30","name":"Image Sequence → MP4 30fps (white bg)","group":"Image Sequence","inputExts":["png","jpg","jpeg","bmp","tga","tif","tiff","dpx","exr","webp"],"description":"Stitch a numbered image sequence into H.264 MP4 at 30fps. Transparent areas become white. Drop one frame.","outputExt":"mp4","inputArgs":"-framerate 30","flatten":"white","args":"-c:v libx264 -crf 18"},
-  {"id":"imgseq-mp4-60","name":"Image Sequence → MP4 60fps (white bg)","group":"Image Sequence","inputExts":["png","jpg","jpeg","bmp","tga","tif","tiff","dpx","exr","webp"],"description":"Stitch a numbered image sequence into H.264 MP4 at 60fps. Transparent areas become white. Drop one frame.","outputExt":"mp4","inputArgs":"-framerate 60","flatten":"white","args":"-c:v libx264 -crf 18"},
-  {"id":"imgseq-mp4-30-black","name":"Image Sequence → MP4 30fps (black bg)","group":"Image Sequence","inputExts":["png","jpg","jpeg","bmp","tga","tif","tiff","dpx","exr","webp"],"description":"Stitch a numbered image sequence into H.264 MP4 at 30fps. Transparent areas become black. Drop one frame.","outputExt":"mp4","inputArgs":"-framerate 30","flatten":"black","args":"-c:v libx264 -crf 18"},
-  {"id":"imgseq-prores-30","name":"Image Sequence → ProRes 30fps (white bg)","group":"Image Sequence","inputExts":["png","jpg","jpeg","bmp","tga","tif","tiff","dpx","exr","webp"],"description":"Stitch a numbered image sequence into ProRes 422 HQ at 30fps. Transparent areas become white. Drop one frame.","outputExt":"mov","inputArgs":"-framerate 30","flatten":"white","args":"-c:v prores_ks -profile:v 3"}
+  {
+    "id": "mp4-hq-original",
+    "name": "→ MP4 HQ (keep size)",
+    "group": "MP4",
+    "inputExts": [
+      "*"
+    ],
+    "description": "H.264 slow, CRF 14, AAC 128k, original resolution",
+    "outputExt": "mp4",
+    "args": "-c:v libx264 -preset slow -crf 14 -c:a aac -b:a 128k"
+  },
+  {
+    "id": "mp4-hq-576p",
+    "name": "→ MP4 HQ 576p",
+    "group": "MP4",
+    "inputExts": [
+      "*"
+    ],
+    "description": "H.264 slow, CRF 14, AAC 128k, 1024×576",
+    "outputExt": "mp4",
+    "args": "-c:v libx264 -preset slow -crf 14 -c:a aac -b:a 128k -vf scale=1024:576"
+  },
+  {
+    "id": "mp4-hq-720p",
+    "name": "→ MP4 HQ 720p",
+    "group": "MP4",
+    "inputExts": [
+      "*"
+    ],
+    "description": "H.264 slow, CRF 14, AAC 128k, 1280×720",
+    "outputExt": "mp4",
+    "args": "-c:v libx264 -preset slow -crf 14 -c:a aac -b:a 128k -vf scale=1280:720"
+  },
+  {
+    "id": "mp4-hq-1080p",
+    "name": "→ MP4 HQ 1080p",
+    "group": "MP4",
+    "inputExts": [
+      "*"
+    ],
+    "description": "H.264 veryfast, CRF 14, AAC 128k, 1920×1080",
+    "outputExt": "mp4",
+    "args": "-c:v libx264 -preset veryfast -crf 14 -c:a aac -b:a 128k -vf scale=1920:1080"
+  },
+  {
+    "id": "mp4-hq-1440p",
+    "name": "→ MP4 HQ 1440p",
+    "group": "MP4",
+    "inputExts": [
+      "*"
+    ],
+    "description": "H.264 veryfast, CRF 14, AAC 128k, 2560×1440",
+    "outputExt": "mp4",
+    "args": "-c:v libx264 -preset veryfast -crf 14 -c:a aac -b:a 128k -vf scale=2560:1440"
+  },
+  {
+    "id": "mp4-hq-2160p",
+    "name": "→ MP4 HQ 2160p (4K)",
+    "group": "MP4",
+    "inputExts": [
+      "*"
+    ],
+    "description": "H.264 veryfast, CRF 14, AAC 128k, 3840×2160",
+    "outputExt": "mp4",
+    "args": "-c:v libx264 -preset veryfast -crf 14 -c:a aac -b:a 128k -vf scale=3840:2160"
+  },
+  {
+    "id": "mp4-hq-8k",
+    "name": "→ MP4 HQ 8K",
+    "group": "MP4",
+    "inputExts": [
+      "*"
+    ],
+    "description": "H.264 veryfast, CRF 14, AAC 128k, 7680×4320",
+    "outputExt": "mp4",
+    "args": "-c:v libx264 -preset veryfast -crf 14 -c:a aac -b:a 128k -vf scale=7680:4320"
+  },
+  {
+    "id": "mp4-mq-original",
+    "name": "→ MP4 MQ (keep size)",
+    "group": "MP4",
+    "inputExts": [
+      "*"
+    ],
+    "description": "H.264 slow, CRF 20, AAC 128k, original resolution",
+    "outputExt": "mp4",
+    "args": "-c:v libx264 -preset slow -crf 20 -c:a aac -b:a 128k"
+  },
+  {
+    "id": "mp4-hq-1440p-square",
+    "name": "→ MP4 HQ 1440p Square",
+    "group": "MP4",
+    "inputExts": [
+      "*"
+    ],
+    "description": "H.264 veryfast, CRF 14, AAC 128k, 1440×1440 square",
+    "outputExt": "mp4",
+    "args": "-c:v libx264 -preset veryfast -crf 14 -c:a aac -b:a 128k -vf scale=1440:1440"
+  },
+  {
+    "id": "mp4-vertical-1080",
+    "name": "→ MP4 Vertical 1080×1920",
+    "group": "MP4",
+    "inputExts": [
+      "*"
+    ],
+    "description": "H.264 veryfast, CRF 16, AAC 128k, 9:16 portrait (reels/shorts)",
+    "outputExt": "mp4",
+    "args": "-c:v libx264 -preset veryfast -crf 16 -c:a aac -b:a 128k -vf scale=1080:1920"
+  },
+  {
+    "id": "mp4-lq",
+    "name": "→ MP4 LQ",
+    "group": "MP4",
+    "inputExts": [
+      "*"
+    ],
+    "description": "H.264 slow, CRF 25, AAC 128k, 800×480",
+    "outputExt": "mp4",
+    "args": "-c:v libx264 -preset slow -crf 25 -c:a aac -b:a 128k -vf scale=800:480"
+  },
+  {
+    "id": "mp4-web-1080p",
+    "name": "→ MP4 Web Stream 1080p",
+    "group": "MP4",
+    "inputExts": [
+      "*"
+    ],
+    "description": "H.264 fast, CRF 23, AAC 96k, faststart for web streaming",
+    "outputExt": "mp4",
+    "args": "-c:v libx264 -preset fast -crf 23 -c:a aac -b:a 96k -vf scale=1920:1080 -movflags +faststart"
+  },
+  {
+    "id": "mp4-h265-1080p",
+    "name": "→ MP4 H.265/HEVC 1080p",
+    "group": "MP4",
+    "inputExts": [
+      "*"
+    ],
+    "description": "H.265 medium, CRF 22, AAC 128k, 1920×1080 (smaller files)",
+    "outputExt": "mp4",
+    "args": "-c:v libx265 -preset medium -crf 22 -tag:v hvc1 -c:a aac -b:a 128k -vf scale=1920:1080"
+  },
+  {
+    "id": "mp4-h265-original",
+    "name": "→ MP4 H.265/HEVC (keep size)",
+    "group": "MP4",
+    "inputExts": [
+      "*"
+    ],
+    "description": "H.265 medium, CRF 24, AAC 128k, original resolution",
+    "outputExt": "mp4",
+    "args": "-c:v libx265 -preset medium -crf 24 -tag:v hvc1 -c:a aac -b:a 128k"
+  },
+  {
+    "id": "mkv-h264-original",
+    "name": "→ MKV H.264 (keep size)",
+    "group": "MKV",
+    "inputExts": [
+      "*"
+    ],
+    "description": "H.264 slow, CRF 16, AAC 192k, original resolution",
+    "outputExt": "mkv",
+    "args": "-c:v libx264 -preset slow -crf 16 -c:a aac -b:a 192k"
+  },
+  {
+    "id": "mkv-h265-original",
+    "name": "→ MKV H.265/HEVC (keep size)",
+    "group": "MKV",
+    "inputExts": [
+      "*"
+    ],
+    "description": "H.265 medium, CRF 22, AAC 192k, original resolution",
+    "outputExt": "mkv",
+    "args": "-c:v libx265 -preset medium -crf 22 -c:a aac -b:a 192k"
+  },
+  {
+    "id": "webm-vp9-1080p",
+    "name": "→ WebM VP9 1080p",
+    "group": "WebM",
+    "inputExts": [
+      "*"
+    ],
+    "description": "VP9, CRF 31, Opus 128k, 1920×1080 (web)",
+    "outputExt": "webm",
+    "args": "-c:v libvpx-vp9 -crf 31 -b:v 0 -c:a libopus -b:a 128k -vf scale=1920:1080"
+  },
+  {
+    "id": "webm-vp9-original",
+    "name": "→ WebM VP9 (keep size)",
+    "group": "WebM",
+    "inputExts": [
+      "*"
+    ],
+    "description": "VP9, CRF 33, Opus 128k, original resolution",
+    "outputExt": "webm",
+    "args": "-c:v libvpx-vp9 -crf 33 -b:v 0 -c:a libopus -b:a 128k"
+  },
+  {
+    "id": "avi-h264",
+    "name": "→ AVI H.264 1080p",
+    "group": "AVI",
+    "inputExts": [
+      "*"
+    ],
+    "description": "H.264 in AVI container, CRF 14, AAC 128k, 1920×1080",
+    "outputExt": "avi",
+    "args": "-c:v libx264 -preset slow -crf 14 -c:a aac -b:a 128k -vf scale=1920:1080"
+  },
+  {
+    "id": "wmv-hq",
+    "name": "→ WMV HQ",
+    "group": "WMV",
+    "inputExts": [
+      "*"
+    ],
+    "description": "MPEG-4 / WMV2, qscale 2 (high quality)",
+    "outputExt": "wmv",
+    "args": "-c:v msmpeg4 -qscale:v 2 -c:a wmav2"
+  },
+  {
+    "id": "wmv-mq",
+    "name": "→ WMV MQ",
+    "group": "WMV",
+    "inputExts": [
+      "*"
+    ],
+    "description": "MPEG-4 / WMV2, qscale 5 (medium quality)",
+    "outputExt": "wmv",
+    "args": "-c:v msmpeg4 -qscale:v 5 -c:a wmav2"
+  },
+  {
+    "id": "wmv-lq",
+    "name": "→ WMV LQ",
+    "group": "WMV",
+    "inputExts": [
+      "*"
+    ],
+    "description": "MPEG-4 / WMV2, 5Mbps bitrate (low quality)",
+    "outputExt": "wmv",
+    "args": "-c:v msmpeg4 -b:v 5M -c:a wmav2"
+  },
+  {
+    "id": "mov-25fps",
+    "name": "MOV → MOV 25fps",
+    "group": "MOV",
+    "description": "Rewrap MOV, force 25fps, copy streams where possible",
+    "outputExt": "mov",
+    "args": "-max_muxing_queue_size 400 -r 25"
+  },
+  {
+    "id": "mov-slow-1x5",
+    "name": "MOV → MOV Slow ×1.5",
+    "group": "MOV",
+    "description": "Slow video to 1.5× duration, audio pitched down to match",
+    "outputExt": "mov",
+    "args": "-max_muxing_queue_size 400 -filter:v setpts=1.5*PTS -filter:a atempo=0.667"
+  },
+  {
+    "id": "mov-slow-2x",
+    "name": "MOV → MOV Slow ×2",
+    "group": "MOV",
+    "description": "Slow video to 2× duration, audio pitched down to match",
+    "outputExt": "mov",
+    "args": "-max_muxing_queue_size 400 -filter:v setpts=2.0*PTS -filter:a atempo=0.5"
+  },
+  {
+    "id": "prores-proxy",
+    "name": "→ ProRes 422 Proxy",
+    "group": "Editing",
+    "inputExts": [
+      "*"
+    ],
+    "description": "Apple ProRes 422 Proxy, PCM 16-bit — light editing files",
+    "outputExt": "mov",
+    "args": "-c:v prores_ks -profile:v 0 -c:a pcm_s16le"
+  },
+  {
+    "id": "prores-standard",
+    "name": "→ ProRes 422",
+    "group": "Editing",
+    "inputExts": [
+      "*"
+    ],
+    "description": "Apple ProRes 422, PCM 16-bit — standard editing",
+    "outputExt": "mov",
+    "args": "-c:v prores_ks -profile:v 2 -c:a pcm_s16le"
+  },
+  {
+    "id": "prores-hq",
+    "name": "→ ProRes 422 HQ",
+    "group": "Editing",
+    "inputExts": [
+      "*"
+    ],
+    "description": "Apple ProRes 422 HQ, PCM 24-bit — high quality editing",
+    "outputExt": "mov",
+    "args": "-c:v prores_ks -profile:v 3 -c:a pcm_s24le"
+  },
+  {
+    "id": "dnxhd-1080p",
+    "name": "→ DNxHD 1080p25",
+    "group": "Editing",
+    "inputExts": [
+      "*"
+    ],
+    "description": "Avid DNxHD 120 Mbps, 1920×1080 @ 25fps, PCM audio",
+    "outputExt": "mov",
+    "args": "-c:v dnxhd -b:v 120M -vf scale=1920:1080,fps=25,format=yuv422p -c:a pcm_s16le"
+  },
+  {
+    "id": "gif-480p",
+    "name": "→ GIF 480px 15fps",
+    "group": "GIF",
+    "inputExts": [
+      "*"
+    ],
+    "description": "Optimised palette GIF, 480px wide, 15fps",
+    "outputExt": "gif",
+    "args": "-vf fps=15,scale=480:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse -loop 0"
+  },
+  {
+    "id": "gif-720p",
+    "name": "→ GIF 720px 20fps",
+    "group": "GIF",
+    "inputExts": [
+      "*"
+    ],
+    "description": "Optimised palette GIF, 720px wide, 20fps",
+    "outputExt": "gif",
+    "args": "-vf fps=20,scale=720:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse -loop 0"
+  },
+  {
+    "id": "gif-320p",
+    "name": "→ GIF 320px 12fps (tiny)",
+    "group": "GIF",
+    "inputExts": [
+      "*"
+    ],
+    "description": "Small palette GIF, 320px wide, 12fps",
+    "outputExt": "gif",
+    "args": "-vf fps=12,scale=320:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse -loop 0"
+  },
+  {
+    "id": "audio-mp3-320",
+    "name": "→ MP3 320k",
+    "group": "Audio",
+    "inputExts": [
+      "*"
+    ],
+    "description": "Extract audio as MP3 320kbps, strip video",
+    "outputExt": "mp3",
+    "args": "-vn -c:a libmp3lame -b:a 320k"
+  },
+  {
+    "id": "audio-mp3-192",
+    "name": "→ MP3 192k",
+    "group": "Audio",
+    "inputExts": [
+      "*"
+    ],
+    "description": "Extract audio as MP3 192kbps, strip video",
+    "outputExt": "mp3",
+    "args": "-vn -c:a libmp3lame -b:a 192k"
+  },
+  {
+    "id": "audio-aac-256",
+    "name": "→ AAC / M4A 256k",
+    "group": "Audio",
+    "inputExts": [
+      "*"
+    ],
+    "description": "Extract audio as AAC 256kbps, strip video",
+    "outputExt": "m4a",
+    "args": "-vn -c:a aac -b:a 256k"
+  },
+  {
+    "id": "audio-opus-128",
+    "name": "→ Opus 128k",
+    "group": "Audio",
+    "inputExts": [
+      "*"
+    ],
+    "description": "Extract audio as Opus 128kbps (efficient), strip video",
+    "outputExt": "opus",
+    "args": "-vn -c:a libopus -b:a 128k"
+  },
+  {
+    "id": "audio-ogg-q5",
+    "name": "→ OGG Vorbis",
+    "group": "Audio",
+    "inputExts": [
+      "*"
+    ],
+    "description": "Extract audio as OGG Vorbis (quality 5), strip video",
+    "outputExt": "ogg",
+    "args": "-vn -c:a libvorbis -qscale:a 5"
+  },
+  {
+    "id": "audio-flac",
+    "name": "→ FLAC (lossless)",
+    "group": "Audio",
+    "inputExts": [
+      "*"
+    ],
+    "description": "Extract audio as lossless FLAC, strip video",
+    "outputExt": "flac",
+    "args": "-vn -c:a flac"
+  },
+  {
+    "id": "audio-wav",
+    "name": "→ WAV (PCM 16-bit)",
+    "group": "Audio",
+    "inputExts": [
+      "*"
+    ],
+    "description": "Extract audio as uncompressed WAV PCM 16-bit",
+    "outputExt": "wav",
+    "args": "-vn -c:a pcm_s16le"
+  },
+  {
+    "id": "util-extract-poster",
+    "name": "Extract first frame → PNG",
+    "group": "Utility",
+    "inputExts": [
+      "*"
+    ],
+    "description": "Save the very first frame as a PNG image",
+    "outputExt": "png",
+    "args": "-frames:v 1"
+  },
+  {
+    "id": "util-mute",
+    "name": "Remove audio (mute)",
+    "group": "Utility",
+    "inputExts": [
+      "*"
+    ],
+    "description": "Re-encode video H.264 CRF 18, drop all audio",
+    "outputExt": "mp4",
+    "args": "-c:v libx264 -preset veryfast -crf 18 -an"
+  },
+  {
+    "id": "util-strip-fast",
+    "name": "Strip audio (no re-encode)",
+    "group": "Utility",
+    "inputExts": [
+      "*"
+    ],
+    "description": "Keep video stream as-is, remove audio (fast copy)",
+    "outputExt": "mp4",
+    "args": "-c:v copy -an"
+  },
+  {
+    "id": "util-normalize-audio",
+    "name": "Normalize loudness → MP4",
+    "group": "Utility",
+    "inputExts": [
+      "*"
+    ],
+    "description": "EBU R128 loudness normalize, H.264 CRF 18, AAC 192k",
+    "outputExt": "mp4",
+    "args": "-c:v libx264 -preset veryfast -crf 18 -af loudnorm -c:a aac -b:a 192k"
+  },
+  {
+    "id": "util-rotate-cw",
+    "name": "Rotate 90° clockwise → MP4",
+    "group": "Utility",
+    "inputExts": [
+      "*"
+    ],
+    "description": "Rotate video 90° clockwise, H.264 CRF 18, AAC 128k",
+    "outputExt": "mp4",
+    "args": "-vf transpose=1 -c:v libx264 -preset veryfast -crf 18 -c:a aac -b:a 128k"
+  },
+  {
+    "id": "imgseq-mp4-30",
+    "name": "Image Sequence → MP4 30fps (white bg)",
+    "group": "Image Sequence",
+    "inputExts": [
+      "png",
+      "jpg",
+      "jpeg",
+      "bmp",
+      "tga",
+      "tif",
+      "tiff",
+      "dpx",
+      "exr",
+      "webp"
+    ],
+    "description": "Stitch a numbered image sequence into H.264 MP4 at 30fps. Transparent areas become white. Drop one frame.",
+    "outputExt": "mp4",
+    "inputArgs": "-framerate 30",
+    "flatten": "white",
+    "args": "-c:v libx264 -crf 18"
+  },
+  {
+    "id": "imgseq-mp4-60",
+    "name": "Image Sequence → MP4 60fps (white bg)",
+    "group": "Image Sequence",
+    "inputExts": [
+      "png",
+      "jpg",
+      "jpeg",
+      "bmp",
+      "tga",
+      "tif",
+      "tiff",
+      "dpx",
+      "exr",
+      "webp"
+    ],
+    "description": "Stitch a numbered image sequence into H.264 MP4 at 60fps. Transparent areas become white. Drop one frame.",
+    "outputExt": "mp4",
+    "inputArgs": "-framerate 60",
+    "flatten": "white",
+    "args": "-c:v libx264 -crf 18"
+  },
+  {
+    "id": "imgseq-mp4-30-black",
+    "name": "Image Sequence → MP4 30fps (black bg)",
+    "group": "Image Sequence",
+    "inputExts": [
+      "png",
+      "jpg",
+      "jpeg",
+      "bmp",
+      "tga",
+      "tif",
+      "tiff",
+      "dpx",
+      "exr",
+      "webp"
+    ],
+    "description": "Stitch a numbered image sequence into H.264 MP4 at 30fps. Transparent areas become black. Drop one frame.",
+    "outputExt": "mp4",
+    "inputArgs": "-framerate 30",
+    "flatten": "black",
+    "args": "-c:v libx264 -crf 18"
+  },
+  {
+    "id": "imgseq-prores-30",
+    "name": "Image Sequence → ProRes 30fps (white bg)",
+    "group": "Image Sequence",
+    "inputExts": [
+      "png",
+      "jpg",
+      "jpeg",
+      "bmp",
+      "tga",
+      "tif",
+      "tiff",
+      "dpx",
+      "exr",
+      "webp"
+    ],
+    "description": "Stitch a numbered image sequence into ProRes 422 HQ at 30fps. Transparent areas become white. Drop one frame.",
+    "outputExt": "mov",
+    "inputArgs": "-framerate 30",
+    "flatten": "white",
+    "args": "-c:v prores_ks -profile:v 3"
+  }
 ]
