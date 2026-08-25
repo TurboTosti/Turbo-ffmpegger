@@ -5,6 +5,7 @@
 <HTA:APPLICATION
   ID="FFmpegBatch"
   APPLICATIONNAME="Turbo ffmpegger"
+  ICON="Turbo ffmpegger.ico"
   CAPTION="yes"
   SHOWINTASKBAR="yes"
   SINGLEINSTANCE="yes"
@@ -652,6 +653,21 @@ var fancyEnabled = true;      // animated background on/off
 var bgPattern    = "ambient"; // which background pattern is active
 var currentLang  = "en";      // en | nl | ja | zh | ko
 
+// Native file-drop bridge. IE9's HTML dataTransfer object does not expose
+// reliable local paths, so a tiny owned WinForms surface receives Windows
+// CF_HDROP data from Explorer, Chrome and Firefox and forwards verified paths
+// through a private per-session temp folder.
+var dropBridgeDir       = "";
+var dropBridgeTimer     = null;
+var dropBridgeStartedAt = 0;
+var dropBridgeReady     = false;
+var dropBridgeFailed    = false;
+var dropBridgeErrorSeen = false;
+var dropBridgeLastGeo   = "";
+var dropBridgeLastState = "";
+var dropBridgeSuspended = 0;
+var dropBridgeErrorText = "";
+
 // ══ Localisation ══════════════════════════════════════════════════════════
 // Icons stay in code; only the words are translated here. {n}/{m} are filled by L().
 var LANG = {
@@ -804,6 +820,7 @@ function applyLanguage() {
   T("empty-text","empty_text");
   T("btn-clear","clear_done");                   H("btn-stop","&#9632; "+L("stop_all"));   H("btn-run","&#9654; "+L("convert"));
   renderLangControls(); renderBgControls(); updateTally(); renderPresets(); renderJobs();
+  dropBridgeUpdateUi();
 }
 function renderLangControls() {
   var t = getT(), codes = ["en","nl","ja","zh","ko"];
@@ -1705,6 +1722,7 @@ function clearScale(el){ el.style.msTransform = ""; el.style.transform = ""; }
 function popIn(ov, box){
   if(!ov) return;
   ov.style.display="block";
+  dropBridgePublishGeometry(true);
   if(!box){ setOpacity(ov,1); return; }
   var t0=(new Date()).getTime(), dur=280;
   setOpacity(ov,0); setScale(box,0.62);
@@ -1722,17 +1740,27 @@ function popOut(ov, box, done){
     var p=((new Date()).getTime()-t0)/dur; if(p>1)p=1;
     setOpacity(ov, 1-p);
     if(box) setScale(box, 1-0.10*p);
-    if(p>=1){ clearInterval(tm); ov.style.display="none"; setOpacity(ov,1); if(box) clearScale(box); if(done) done(); }
+    if(p>=1){ clearInterval(tm); ov.style.display="none"; setOpacity(ov,1); if(box) clearScale(box); dropBridgePublishGeometry(true); if(done) done(); }
   },16);
 }
 
 
 // ── ffprobe integration ──────────────────────────────────
 
+// Paths are written into temporary .bat files. Percent signs expand in cmd.exe
+// even inside quotes, so double them before writing. This keeps files such as
+// "100% done.mp4" and ffmpeg %04d sequence patterns intact.
+function batEscapePercents(value) {
+  return ("" + value).replace(/%/g, "%%");
+}
+function batQuote(path) {
+  return '"' + batEscapePercents(path) + '"';
+}
+
 // Return the path to ffprobe.exe (same folder as ffmpeg.exe, or PATH).
 function ffprobePath() {
   var local = appFolder() + "\\ffprobe.exe";
-  if (fso.FileExists(local)) return '"' + local + '"';
+  if (fso.FileExists(local)) return batQuote(local);
   return "ffprobe";
 }
 
@@ -1755,7 +1783,7 @@ function runNextProbe() {
   var bat = wsh.ExpandEnvironmentStrings("%TEMP%") + "\\ffbatch_probe_" + job.id + ".bat";
   var fp  = ffprobePath();
   // -v quiet -print_format json -show_streams -show_format
-  var cmd = '@echo off\n' + fp + ' -v quiet -print_format json -show_streams -show_format -i "' + probePath + '" > "' + tmp + '" 2>&1\n';
+  var cmd = '@echo off\n' + fp + ' -v quiet -print_format json -show_streams -show_format -i ' + batQuote(probePath) + ' > ' + batQuote(tmp) + ' 2>&1\n';
   try {
     var bf = fso.CreateTextFile(bat, true, false);
     bf.Write(cmd); bf.Close();
@@ -2550,6 +2578,7 @@ function toggleSettings() {
   } else {
     p.className = "open";
   }
+  dropBridgePublishGeometry(true);
 }
 document.onclick = function(e) {
   var t = e ? e.srcElement : window.event.srcElement;
@@ -2562,7 +2591,241 @@ document.onclick = function(e) {
     el = el.parentElement;
   }
   panel.className = "";
+  dropBridgePublishGeometry(true);
 };
+
+// ── Native drop bridge ────────────────────────────────────
+// MSHTML does not consistently expose local paths from Chromium/Firefox
+// download-list drags. A tiny owned WinForms surface receives Windows'
+// genuine FileDrop payload and queues verified paths for this HTA.
+function dropBridgePath(name) {
+  return dropBridgeDir ? (dropBridgeDir + "\\" + name) : "";
+}
+
+function writeDropBridgeAscii(path, text) {
+  var out = fso.CreateTextFile(path, true, false);
+  out.Write(text);
+  out.Close();
+}
+
+function readDropBridgeAscii(path) {
+  var input = fso.OpenTextFile(path, 1, false, 0);
+  var text = input.AtEndOfStream ? "" : input.ReadAll();
+  input.Close();
+  return text;
+}
+
+function readDropBridgeUnicode(path) {
+  var input = fso.OpenTextFile(path, 1, false, -1);
+  var text = input.AtEndOfStream ? "" : input.ReadAll();
+  input.Close();
+  return text;
+}
+
+function dropBridgeElementVisible(id) {
+  var el = document.getElementById(id);
+  if (!el) return false;
+  try {
+    var display = el.currentStyle ? el.currentStyle.display : el.style.display;
+    return display !== "none";
+  } catch(_) { return false; }
+}
+
+function dropBridgeUiClear() {
+  if (dropBridgeSuspended > 0) return false;
+  var settings = document.getElementById("settings-panel");
+  if (settings && settings.className.indexOf("open") >= 0) return false;
+  if (dropBridgeElementVisible("editor-overlay")) return false;
+  if (dropBridgeElementVisible("inspect-overlay")) return false;
+  if (dropBridgeElementVisible("apply-overlay")) return false;
+  return true;
+}
+
+function dropBridgeSetHover(on) {
+  try {
+    var t = getT();
+    var dz = document.getElementById("dropzone");
+    if (!dz) return;
+    dz.style.borderColor = on ? t.ac : t.bordHi;
+    dz.style.background  = on ? t.surf : t.surf2;
+  } catch(_) {}
+}
+
+function dropBridgeUpdateUi() {
+  var sub = document.getElementById("dz-sub");
+  if (!sub) return;
+  if (dropBridgeFailed) {
+    sub.innerText = "Drag helper unavailable \u2014 Browse still works";
+    sub.title = dropBridgeErrorText || "The local drag helper could not start.";
+  } else {
+    sub.innerText = L("drop_sub");
+    sub.title = "";
+  }
+}
+
+function dropBridgePublishGeometry(force) {
+  if (!dropBridgeDir) return;
+  try {
+    var dz = document.getElementById("dropzone");
+    if (!dz) return;
+    var browse = document.getElementById("dz-browse");
+    var dr = dz.getBoundingClientRect();
+    var br = browse ? browse.getBoundingClientRect() : null;
+    var de = document.documentElement, body = document.body;
+    var vw = (de && de.clientWidth) || (body && body.clientWidth) || 1;
+    var vh = (de && de.clientHeight) || (body && body.clientHeight) || 1;
+    var clientLeft = (de && de.clientLeft) || (body && body.clientLeft) || 0;
+    var clientTop  = (de && de.clientTop)  || (body && body.clientTop)  || 0;
+    var left = Math.round(dr.left - clientLeft);
+    var top = Math.round(dr.top - clientTop);
+    var width = Math.max(1, Math.round(dr.right - dr.left));
+    var height = Math.max(1, Math.round(dr.bottom - dr.top));
+    var holeX = br ? Math.round(br.left - dr.left) : 0;
+    var holeY = br ? Math.round(br.top - dr.top) : 0;
+    var holeWidth = br ? Math.max(0, Math.round(br.right - br.left)) : 0;
+    var holeHeight = br ? Math.max(0, Math.round(br.bottom - br.top)) : 0;
+    var enabled = (dropBridgeReady && !dropBridgeFailed && dropBridgeUiClear()) ? 1 : 0;
+    var geo = [enabled,left,top,width,height,holeX,holeY,holeWidth,holeHeight,Math.round(vw),Math.round(vh)].join("|");
+    if (force || geo !== dropBridgeLastGeo) {
+      writeDropBridgeAscii(dropBridgePath("geometry.txt"), geo);
+      dropBridgeLastGeo = geo;
+    }
+    if (!enabled) dropBridgeSetHover(false);
+  } catch(_) {}
+}
+
+function dropBridgeConsumeDrops() {
+  if (!dropBridgeDir || !fso.FolderExists(dropBridgeDir)) return;
+  var queue = [];
+  try {
+    var files = new Enumerator(fso.GetFolder(dropBridgeDir).Files);
+    for (; !files.atEnd(); files.moveNext()) {
+      var item = files.item();
+      if (/\.drop$/i.test("" + item.Name)) queue.push("" + item.Path);
+    }
+  } catch(_) { return; }
+  queue.sort();
+
+  var added = 0;
+  for (var i=0; i<queue.length; i++) {
+    var readOk = false;
+    try {
+      var raw = readDropBridgeUnicode(queue[i]);
+      readOk = true;
+      var lines = raw.replace(/\r/g, "").split("\n");
+      for (var j=0; j<lines.length; j++) {
+        var path = lines[j].replace(/^\s+|\s+$/g, "");
+        if (!path) continue;
+        try {
+          if (fso.FileExists(path)) {
+            path = fso.GetAbsolutePathName(path);
+            if (addInputFile(path)) added++;
+          }
+        } catch(_) {}
+      }
+    } catch(_) {}
+    if (readOk) { try { fso.DeleteFile(queue[i], true); } catch(_) {} }
+  }
+  if (added > 0) { renderJobs(); updateRunButton(); renderPresets(); }
+}
+
+function dropBridgeReadStatus() {
+  if (!dropBridgeDir) return;
+  try {
+    if (!dropBridgeReady && fso.FileExists(dropBridgePath("ready.txt"))) {
+      dropBridgeReady = true;
+      dropBridgeFailed = false;
+      dropBridgeUpdateUi();
+    }
+  } catch(_) {}
+
+  try {
+    var statePath = dropBridgePath("state.txt");
+    if (fso.FileExists(statePath)) {
+      var state = readDropBridgeAscii(statePath).replace(/^\s+|\s+$/g, "").toLowerCase();
+      if (state !== dropBridgeLastState) {
+        dropBridgeLastState = state;
+        dropBridgeSetHover(state === "hover");
+      }
+    }
+  } catch(_) {}
+
+  try {
+    var errorPath = dropBridgePath("error.txt");
+    if (!dropBridgeErrorSeen && fso.FileExists(errorPath)) {
+      var bridgeError = readDropBridgeUnicode(errorPath).replace(/^\s+|\s+$/g, "");
+      dropBridgeErrorSeen = true;
+      dropBridgeErrorText = bridgeError;
+      dropBridgeFailed = true;
+      dropBridgeSetHover(false);
+      dropBridgeUpdateUi();
+    }
+  } catch(_) {}
+
+  if (!dropBridgeReady && !dropBridgeFailed && dropBridgeStartedAt &&
+      ((new Date()).getTime() - dropBridgeStartedAt > 12000)) {
+    dropBridgeFailed = true;
+    dropBridgeErrorText = "The local drag helper did not become ready in time.";
+    dropBridgeUpdateUi();
+  }
+}
+
+function dropBridgeTick() {
+  dropBridgeReadStatus();
+  dropBridgeConsumeDrops();
+  dropBridgePublishGeometry(false);
+}
+
+function dropBridgeSuspend(on) {
+  if (on) dropBridgeSuspended++;
+  else if (dropBridgeSuspended > 0) dropBridgeSuspended--;
+  dropBridgePublishGeometry(true);
+}
+
+function dropBridgeStart() {
+  if (dropBridgeTimer || dropBridgeDir) return;
+  try {
+    var helper = appFolder() + "\\drop_receiver.ps1";
+    if (!fso.FileExists(helper)) throw new Error("Missing Data\\drop_receiver.ps1");
+    var temp = wsh.ExpandEnvironmentStrings("%TEMP%");
+    var leaf = "TurboFfmpeggerDrop_" + (new Date()).getTime() + "_" + Math.floor(Math.random()*1000000000);
+    dropBridgeDir = temp + "\\" + leaf;
+    fso.CreateFolder(dropBridgeDir);
+    dropBridgeStartedAt = (new Date()).getTime();
+
+    var psExe = wsh.ExpandEnvironmentStrings("%SystemRoot%") + "\\System32\\WindowsPowerShell\\v1.0\\powershell.exe";
+    if (!fso.FileExists(psExe)) psExe = "powershell.exe";
+    var cmd = '"' + psExe + '" -NoLogo -NoProfile -NonInteractive -STA -ExecutionPolicy Bypass -WindowStyle Hidden -File "' + helper + '" -SessionDir "' + dropBridgeDir + '"';
+    wsh.Run(cmd, 0, false);
+    dropBridgeTimer = window.setInterval(dropBridgeTick, 150);
+    dropBridgeTick();
+  } catch(e) {
+    dropBridgeFailed = true;
+    dropBridgeErrorText = e.message || ("" + e);
+    dropBridgeUpdateUi();
+    // If launch itself failed, no helper exists to remove the empty private
+    // session directory.
+    try {
+      if (dropBridgeDir && fso.FolderExists(dropBridgeDir)) fso.DeleteFolder(dropBridgeDir, true);
+    } catch(_) {}
+    dropBridgeDir = "";
+  }
+}
+
+function dropBridgeStop() {
+  if (dropBridgeTimer) {
+    window.clearInterval(dropBridgeTimer);
+    dropBridgeTimer = null;
+  }
+  try {
+    if (dropBridgeDir && fso.FolderExists(dropBridgeDir)) {
+      writeDropBridgeAscii(dropBridgePath("stop.txt"), "stop");
+    }
+  } catch(_) {}
+}
+
+window.onbeforeunload = function() { dropBridgeStop(); };
+window.onunload = function() { dropBridgeStop(); };
 
 // ── Boot ───────────────────────────────────────────────
 window.onload = function() {
@@ -2577,6 +2840,7 @@ window.onload = function() {
   fitAppRootToViewport(true);
   window.setTimeout(function(){ fitAppRootToViewport(true); }, 80);
   window.setTimeout(function(){ fitAppRootToViewport(true); }, 300);
+  dropBridgeStart();
 };
 
 function appFolder() {
@@ -3330,107 +3594,97 @@ function dzDrop(e) {
   cancelEvt(e);
   dzLeave(e);
 
-  // Collect unique, existing file paths from every method we can.
+  // Collect only paths contained in the actual drop payload. The old fallback
+  // enumerated selections from every open Explorer window; a browser drag
+  // often contains no DOM-visible path, so that fallback could add unrelated
+  // selected files. It is deliberately gone.
   var found = {}, order = [];
   function collect(fp) {
-    fp = ("" + fp)
-      .replace(/\u0000/g, "")
-      .replace(/^\s+|\s+$/g, "")
-      .replace(/^"|"$/g, "");
-    if (!fp || fp.indexOf("\\") < 0) return;
+    fp = normaliseDroppedPath(fp);
+    if (!fp) return;
     var key = fp.toLowerCase();
-    if (found[key]) return;
-    try { if (fso.FileExists(fp)) { found[key] = 1; order.push(fp); } } catch(_) {}
+    if (!found[key]) { found[key] = 1; order.push(fp); }
   }
 
   var dt = e.dataTransfer;
-
-  // First, capture what was ACTUALLY dropped. In IE/HTA the File objects
-  // usually expose .name (and sometimes .path) even when full paths are
-  // blocked. We use the names to filter the shell fallback below so we
-  // never pick up selections from unrelated Explorer windows.
-  var droppedNames = {}, haveNames = false;
   try {
     if (dt && dt.files) {
       for (var fi=0; fi<dt.files.length; fi++) {
         var fo = dt.files[fi];
-        if (fo.path) collect(fo.path);                 // rarely populated, but free to try
-        if (fo.name) { droppedNames[(""+fo.name).toLowerCase()] = 1; haveNames = true; }
+        try { if (fo.path) collect(fo.path); } catch(_) {}
       }
     }
   } catch(_) {}
 
-  // 1) FileNameW — IE's Unicode HDROP format. Multi-file drops are
-  //    separated by null characters.
-  try { var w = dt.getData("FileNameW"); if (w) { var ws = w.split("\u0000"); for (var i=0;i<ws.length;i++) collect(ws[i]); } } catch(_) {}
-  // 2) FileName — ANSI single-file format.
-  try { var a = dt.getData("FileName"); if (a) collect(a); } catch(_) {}
-  // 3) Text — newline-separated paths from some sources.
-  try { var tx = dt.getData("Text"); if (tx) { var ls = tx.replace(/\r/g,"").split("\n"); for (var j=0;j<ls.length;j++) collect(ls[j]); } } catch(_) {}
-
-  // 4) Still no real paths? Enumerate the Explorer selection via a one-shot
-  //    VBScript — but keep ONLY paths whose filename matches what was
-  //    actually dropped, so files selected in other windows are ignored.
-  if (order.length === 0) {
-    var shellPaths = dropViaShell();
-    for (var k=0;k<shellPaths.length;k++) {
-      var sp = shellPaths[k];
-      if (haveNames) {
-        var nm = "";
-        try { nm = ("" + fso.GetFileName(sp)).toLowerCase(); } catch(_) {}
-        if (!droppedNames[nm]) continue;   // not one of the dropped files — skip
+  // Different MSHTML builds expose different formats, and unsupported format
+  // names throw "Invalid argument", so every read is isolated.
+  var formats = ["FileNameW","FileName","URL","text/uri-list","text/x-moz-url","Text"];
+  for (var i=0; i<formats.length; i++) {
+    try {
+      if (!dt) break;
+      var raw = dt.getData(formats[i]);
+      if (!raw) continue;
+      var parts = ("" + raw).replace(/\r/g, "").split(/[\u0000\n]/);
+      for (var j=0; j<parts.length; j++) {
+        var part = parts[j].replace(/^\s+|\s+$/g, "");
+        if (!part || part.charAt(0) === "#") continue;
+        collect(part);
       }
-      collect(sp);
+    } catch(_) {
+      // Try the next format.
     }
   }
 
   var added = 0;
-  for (var m=0; m<order.length; m++) {
-    if (addInputFile(order[m])) added++;
+  for (var k=0; k<order.length; k++) {
+    if (addInputFile(order[k])) added++;
   }
 
   if (added > 0) { renderJobs(); updateRunButton(); renderPresets(); }
-  else { alert("Could not read the dropped file paths.\nPlease use the Browse button instead."); }
+  else {
+    alert("Could not read a local file from this drop.\n\nCompleted Chrome and Firefox downloads are supported while the drag helper is running. Wait for the download to finish, or use Browse.");
+  }
   return false;
 }
 
-// Fallback: list items selected in any open Explorer window (the dragged
-// files) via a tiny VBScript, return their paths.
-function dropViaShell() {
-  var out = [];
-  var tmp = wsh.ExpandEnvironmentStrings("%TEMP%") + "\\ffbatch_drop.txt";
-  var vbs = wsh.ExpandEnvironmentStrings("%TEMP%") + "\\ffbatch_drop.vbs";
-  try {
-    var script =
-      "Dim shl, itm, fso, f, sel, n\r\n" +
-      "Set shl = CreateObject(\"Shell.Application\")\r\n" +
-      "Set fso = CreateObject(\"Scripting.FileSystemObject\")\r\n" +
-      "Set f = fso.CreateTextFile(\"" + tmp + "\", True)\r\n" +
-      "On Error Resume Next\r\n" +
-      "For Each itm In shl.Windows\r\n" +
-      "  Set sel = itm.Document.SelectedItems()\r\n" +
-      "  If Not sel Is Nothing Then\r\n" +
-      "    For n = 0 To sel.Count - 1\r\n" +
-      "      f.WriteLine sel.Item(n).Path\r\n" +
-      "    Next\r\n" +
-      "  End If\r\n" +
-      "Next\r\n" +
-      "f.Close\r\n";
-    var vf = fso.CreateTextFile(vbs, true, false);
-    vf.Write(script); vf.Close();
-    wsh.Run("cscript //NoLogo \"" + vbs + "\"", 0, true);
-  } catch(ex) { return out; }
-  try {
-    if (fso.FileExists(tmp)) {
-      var rf = fso.OpenTextFile(tmp, 1, false);
-      var raw = rf.ReadAll(); rf.Close();
-      try { fso.DeleteFile(tmp); } catch(_) {}
-      try { fso.DeleteFile(vbs); } catch(_) {}
-      var lines = raw.replace(/\r/g,"").split("\n");
-      for (var i=0;i<lines.length;i++) if (lines[i]) out.push(lines[i]);
+function fileUriToPath(value) {
+  var s = ("" + value).replace(/\u0000/g, "").replace(/^\s+|\s+$/g, "").replace(/^["']|["']$/g, "");
+  if (!/^file:/i.test(s)) return "";
+
+  var rest = s.substring(5).replace(/\\/g, "/");
+  var unc = false;
+  if (rest.substring(0,3) === "///") {
+    rest = rest.substring(2);                  // /C:/path
+  } else if (rest.substring(0,2) === "//") {
+    rest = rest.substring(2);
+    if (/^localhost\//i.test(rest)) {
+      rest = rest.substring(10);
+    } else if (!/^[A-Za-z][:\|]\//.test(rest)) {
+      unc = true;                              // server/share/path
     }
-  } catch(ex2) {}
-  return out;
+  }
+
+  try { rest = decodeURIComponent(rest); } catch(_) { return ""; }
+  if (unc) return "\\\\" + rest.replace(/^\/+/, "").replace(/\//g, "\\");
+
+  rest = rest.replace(/^\/+([A-Za-z][:\|]\/)/, "$1");
+  if (rest.length >= 3 && rest.charAt(1) === "|" && rest.charAt(2) === "/") {
+    rest = rest.charAt(0) + ":" + rest.substring(2);
+  }
+  rest = rest.replace(/\//g, "\\");
+  return /^[A-Za-z]:\\/.test(rest) ? rest : "";
+}
+
+function normaliseDroppedPath(value) {
+  var path = ("" + value).replace(/\u0000/g, "").replace(/^\s+|\s+$/g, "").replace(/^["']|["']$/g, "");
+  if (!path) return "";
+  if (/^file:/i.test(path)) path = fileUriToPath(path);
+  else if (/^[A-Za-z]:\//.test(path)) path = path.replace(/\//g, "\\");
+  if (!path || (!/^[A-Za-z]:\\/.test(path) && !/^\\\\/.test(path))) return "";
+  try {
+    if (!fso.FileExists(path)) return "";
+    return fso.GetAbsolutePathName(path);
+  } catch(_) { return ""; }
 }
 function addFile(fileObj) {
   var fp=fileObj.path||fileObj.name;
@@ -3441,7 +3695,9 @@ function browseFiles() {
   // Use the PowerShell picker: true multi-select, proper filter, and no
   // stuck-state (the hidden HTML file input only returns one file and won't
   // re-fire when the same path is chosen again).
-  browseWithPowerShell();
+  dropBridgeSuspend(true);
+  try { browseWithPowerShell(); }
+  finally { dropBridgeSuspend(false); }
 }
 
 function browseWithPowerShell() {
@@ -3451,7 +3707,7 @@ function browseWithPowerShell() {
 
   try {
     var bf = fso.CreateTextFile(bat, true, false);
-    bf.Write('@powershell.exe -NoProfile -ExecutionPolicy Bypass -File "' + ps + '" -OutFile "' + tmp + '"\r\n');
+    bf.Write('@powershell.exe -NoProfile -ExecutionPolicy Bypass -File ' + batQuote(ps) + ' -OutFile ' + batQuote(tmp) + '\r\n');
     bf.Close();
     wsh.Run('"' + bat + '"', 0, true);
   } catch(e) { alert("Browse error: " + e.message); return; }
@@ -3502,12 +3758,17 @@ function fileInputChanged() {
 
 // ── Output folder ──────────────────────────────────────────
 function pickOutputFolder() {
+  dropBridgeSuspend(true);
+  try { pickOutputFolderCore(); }
+  finally { dropBridgeSuspend(false); }
+}
+function pickOutputFolderCore() {
   var tmp = wsh.ExpandEnvironmentStrings("%TEMP%") + "\\ffbatch_folder.txt";
   var bat = wsh.ExpandEnvironmentStrings("%TEMP%") + "\\ffbatch_folder.bat";
   var ps  = appFolder() + "\\pick_folder.ps1";
   try {
     var bf = fso.CreateTextFile(bat, true, false);
-    bf.Write('@powershell.exe -NoProfile -ExecutionPolicy Bypass -File "' + ps + '" -OutFile "' + tmp + '"\r\n');
+    bf.Write('@powershell.exe -NoProfile -ExecutionPolicy Bypass -File ' + batQuote(ps) + ' -OutFile ' + batQuote(tmp) + '\r\n');
     bf.Close();
     wsh.Run('"' + bat + '"', 0, true);
   } catch(e) { alert("Browse error: " + e.message); return; }
@@ -3712,6 +3973,7 @@ function runNext(pending,idx) {
   var log=tmp+"\\ffbatch_"+job.id+".log";
   var ffmpeg=ffmpegPath();
   var inArgs = job.preset.inputArgs ? (job.preset.inputArgs + " ") : "";
+  var presetArgs = job.preset.args || "";
   var cmd;
   if (job.isSequence) {
     // Image sequence: pattern input, with start number and frame count.
@@ -3725,12 +3987,12 @@ function runNext(pending,idx) {
       // which turns into a dark video under yuv420p. Composite each frame onto
       // a solid colour first. scale2ref sizes the background to the frames.
       var fc = "color=c=" + flat + "[bg];[bg][0:v]scale2ref[bg2][fg];[bg2][fg]overlay=shortest=1,format=yuv420p[v]";
-      cmd='@echo off\n'+ffmpeg+' -y '+seqIn+'-i "'+job.inputPath+'" -filter_complex "'+fc+'" -map "[v]" -frames:v '+job.seqCount+' '+job.preset.args+' "'+job.outputPath+'" > "'+log+'" 2>&1\necho EXIT_CODE=%ERRORLEVEL% >> "'+log+'"\n';
+      cmd='@echo off\n'+ffmpeg+' -y '+seqIn+'-i '+batQuote(job.inputPath)+' -filter_complex "'+fc+'" -map "[v]" -frames:v '+job.seqCount+' '+presetArgs+' '+batQuote(job.outputPath)+' > '+batQuote(log)+' 2>&1\necho EXIT_CODE=%ERRORLEVEL% >> '+batQuote(log)+'\n';
     } else {
-      cmd='@echo off\n'+ffmpeg+' -y '+seqIn+'-i "'+job.inputPath+'" -frames:v '+job.seqCount+' '+job.preset.args+' "'+job.outputPath+'" > "'+log+'" 2>&1\necho EXIT_CODE=%ERRORLEVEL% >> "'+log+'"\n';
+      cmd='@echo off\n'+ffmpeg+' -y '+seqIn+'-i '+batQuote(job.inputPath)+' -frames:v '+job.seqCount+' '+presetArgs+' '+batQuote(job.outputPath)+' > '+batQuote(log)+' 2>&1\necho EXIT_CODE=%ERRORLEVEL% >> '+batQuote(log)+'\n';
     }
   } else {
-    cmd='@echo off\n'+ffmpeg+' -y '+inArgs+'-i "'+job.inputPath+'" '+job.preset.args+' "'+job.outputPath+'" > "'+log+'" 2>&1\necho EXIT_CODE=%ERRORLEVEL% >> "'+log+'"\n';
+    cmd='@echo off\n'+ffmpeg+' -y '+inArgs+'-i '+batQuote(job.inputPath)+' '+presetArgs+' '+batQuote(job.outputPath)+' > '+batQuote(log)+' 2>&1\necho EXIT_CODE=%ERRORLEVEL% >> '+batQuote(log)+'\n';
   }
   try { var bf=fso.CreateTextFile(bat,true,false); bf.Write(cmd); bf.Close(); }
   catch(e) { job.status="error"; job.log="Failed: "+e.message; renderJobs(); runNext(pending,idx+1); return; }
@@ -4223,7 +4485,7 @@ function updateRunButton() {
 }
 function ffmpegPath() {
   var local=appFolder()+"\\ffmpeg.exe";
-  if(fso.FileExists(local)) return '"'+local+'"';
+  if(fso.FileExists(local)) return batQuote(local);
   return "ffmpeg";
 }
 function esc(s){if(!s)return"";return(""+s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
