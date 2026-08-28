@@ -42,7 +42,7 @@ body {
 #header, #body-wrap, #toolbar { z-index: 1; }
 
 /* Stylised popups: soft rounded corners + drop shadow (JS drives the bounce). */
-#apply-box, #inspect-box, #editor-box {
+#apply-box, #inspect-box, #editor-box, #game-box {
   border-radius: 10px;
   box-shadow: 0 18px 55px rgba(0,0,0,0.55);
 }
@@ -358,6 +358,12 @@ body {
   text-align:left; margin-bottom:4px;
   border-width:1px; border-style:solid;
 }
+.settings-panel-btn:disabled { cursor:default; opacity:0.55; }
+#update-status {
+  min-height: 28px; margin: 5px 2px 0;
+  font-size: 10px; line-height: 1.4;
+  word-wrap: break-word;
+}
 #ui-scale-row { display:table; width:100%; margin-top:2px; }
 #ui-scale-row td { display:table-cell; vertical-align:middle; }
 #ui-scale-label { font-size:10px; white-space:nowrap; padding-right:8px; }
@@ -444,6 +450,48 @@ body {
   border-width: 1px; border-style: solid; background: none;
 }
 #apply-btns button[disabled] { cursor: default; }
+
+/* Waiting-room arcade game. Kept inside the HTA so it needs no extra files. */
+#btn-game { font-weight:700; }
+#game-overlay {
+  display:none; position:absolute; top:0; left:0; width:100%; height:100%;
+  z-index:500; background:rgba(0,0,0,0.78);
+}
+#game-box {
+  position:absolute; top:50%; left:50%; width:760px; height:576px;
+  margin-left:-380px; margin-top:-288px; padding:12px 18px 14px;
+  overflow:hidden; border:1px solid #20d9ff; border-radius:12px;
+  background:#070b18; color:#eafaff;
+  box-shadow:0 18px 65px rgba(0,0,0,0.75), 0 0 28px rgba(32,217,255,0.22);
+}
+#game-head { display:table; width:100%; height:30px; }
+#game-title-cell, #game-hud, #game-close-cell { display:table-cell; vertical-align:middle; }
+#game-title-cell { width:1px; white-space:nowrap; }
+#game-title { color:#20d9ff; font-size:14px; font-weight:800; letter-spacing:.08em; }
+#game-subtitle { color:#7a91ad; font-size:9px; margin-left:7px; letter-spacing:.08em; }
+#game-hud { text-align:center; color:#9bb0c9; font-family:Consolas,monospace; font-size:11px; }
+#game-hud b { color:#ffffff; }
+#game-close-cell { width:1px; text-align:right; }
+#game-close {
+  width:27px; height:25px; background:none; border:1px solid #334867;
+  color:#9bb0c9; cursor:pointer; font:700 15px Segoe UI,sans-serif;
+}
+#game-canvas {
+  display:block; width:720px; height:430px; margin:7px 1px 8px;
+  background:#02040c; border:1px solid #263b5b; cursor:crosshair;
+}
+#game-canvas:focus { outline:1px solid #20d9ff; }
+#game-footer { display:table; width:100%; height:56px; }
+#game-help { display:table-cell; vertical-align:middle; color:#8195ae; font-size:10px; line-height:1.55; }
+#game-help b { color:#c7f6ff; font-weight:700; }
+#game-buttons { display:table-cell; vertical-align:middle; text-align:right; white-space:nowrap; }
+#game-buttons button {
+  margin-left:7px; padding:5px 12px; background:#0b1426;
+  border:1px solid #334867; color:#b9d1e8; cursor:pointer;
+  font:700 10px Segoe UI,sans-serif;
+}
+#game-buttons button:hover, #game-close:hover,
+#game-buttons button:focus, #game-close:focus { border-color:#20d9ff; color:#20d9ff; outline:1px solid #20d9ff; }
 </style>
 </head>
 <body id="body">
@@ -539,6 +587,10 @@ body {
   <div class="settings-sep" id="settings-sep3"></div>
   <button class="settings-panel-btn" id="sp-editbtn"   onclick="editPresets()">Open presets.json</button>
   <button class="settings-panel-btn" id="sp-reloadbtn" onclick="reloadPresets()">&#8635; Reload presets</button>
+  <div class="settings-sep" id="settings-sep4"></div>
+  <h3 id="settings-update-title">Updates</h3>
+  <button class="settings-panel-btn" id="sp-updatebtn" onclick="checkForUpdates()">&#8635; Check for updates</button>
+  <div id="update-status">Installed version: ...</div>
 </div>
 
 <div id="body-wrap">
@@ -590,6 +642,7 @@ body {
   <table id="toolbar-inner" width="100%"><tr>
     <td id="tally">No jobs</td>
     <td id="toolbar-btns">
+      <button id="btn-game" onclick="waitingGame.open()">Play while waiting</button>
       <button id="btn-clear" onclick="clearDone()">Clear done</button>
       <button id="btn-stop"  onclick="stopAll()">&#9632; Stop all</button>
       <button id="btn-run"   disabled onclick="startQueue()">&#9654; Convert</button>
@@ -627,6 +680,30 @@ body {
   </div>
 </div>
 
+<div id="game-overlay">
+  <div id="game-box" role="dialog" aria-modal="true" aria-labelledby="game-title" aria-describedby="game-help">
+    <div id="game-head">
+      <div id="game-title-cell"><span id="game-title">VOIDBREAKER</span><span id="game-subtitle">INVADERS + ARKANOID</span></div>
+      <div id="game-hud">
+        LEVEL <b id="game-level">1</b> &nbsp; SCORE <b id="game-score">0</b>
+        &nbsp; LIVES <b id="game-lives">3</b> &nbsp; HIGH <b id="game-high">0</b>
+      </div>
+      <div id="game-close-cell"><button id="game-close" title="Close game" aria-label="Close game" onclick="waitingGame.close()">&times;</button></div>
+    </div>
+    <canvas id="game-canvas" width="720" height="430" tabindex="0" aria-label="Voidbreaker game area">This game needs HTML canvas support.</canvas>
+    <div id="game-footer">
+      <div id="game-help">
+        <b>Move</b> &larr; &rarr;, A / D, or mouse &nbsp;&middot;&nbsp; <b>Launch</b> Space or click<br />
+        3 ball hits before a paddle return drop: L laser / x2 multiball / S speed / F fire &nbsp;&middot;&nbsp; Powers stack &nbsp;&middot;&nbsp; <b>P</b> pause &nbsp;&middot;&nbsp; Esc close.
+      </div>
+      <div id="game-buttons">
+        <button id="game-pause" onclick="waitingGame.togglePause()">PAUSE</button>
+        <button id="game-new" onclick="waitingGame.newGame()">NEW GAME</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 </div><!-- /app-root -->
 
 <script language="JScript">
@@ -652,6 +729,17 @@ var currentScale = 1;
 var fancyEnabled = true;      // animated background on/off
 var bgPattern    = "ambient"; // which background pattern is active
 var currentLang  = "en";      // en | nl | ja | zh | ko
+var APP_VERSION_FALLBACK = "v0.5-alpha";
+var APP_VERSION  = APP_VERSION_FALLBACK;
+var updateCheckTimer   = null;
+var updateCheckStarted = 0;
+var updateStatusPath   = "";
+var updateChecking     = false;
+var updateStatusKind   = "installed";
+var updateStatusValue  = "";
+var updateStatusDetail = "";
+var updateWorkerPath   = "";
+var updateInstalling   = false;
 
 // Native file-drop bridge. IE9's HTML dataTransfer object does not expose
 // reliable local paths, so a tiny owned WinForms surface receives Windows
@@ -673,15 +761,21 @@ var dropBridgeErrorText = "";
 var LANG = {
   en: {
     editpresets:"Edit presets.json", settings:"Settings",
-    sec_bg:"Background", sec_theme:"Colour Theme", sec_scale:"UI Scale", sec_lang:"Language", zoom:"Zoom",
+    sec_bg:"Background", sec_theme:"Colour Theme", sec_scale:"UI Scale", sec_lang:"Language", sec_updates:"Updates", zoom:"Zoom",
     fancy:"Fancy graphics", on:"On", off:"Off",
     pat_ambient:"Ambient", pat_futuristic:"Futuristic", pat_waves:"Waves", pat_magic:"Magic", pat_starfield:"Starfield", pat_aurora:"Aurora",
     openpresets:"Open presets.json", reload:"Reload presets",
+    check_updates:"Check for updates", checking_updates:"Checking for updates\u2026",
+    installed_version:"Installed version: {n}", up_to_date:"You're up to date ({n}).", update_available:"Update {n} is available.",
+    update_failed:"Update check failed.", update_starting:"Installing {n}. Turbo ffmpegger will restart.",
+    update_prompt:"Update {n} is available. Turbo ffmpegger will close, install it, and reopen. Queued jobs will be cleared. Continue?",
+    update_busy:"Wait for media analysis to finish, or stop the active conversion, before updating.", updater_missing:"The updater file is missing.",
+    update_timeout:"The update check timed out. Please try again.",
     filter_ph:"Filter presets (name, format, quality)...", fav_only:"Favourites only", compat_only:"Compatible only",
     drop_title:"Drop files here", drop_sub:"video & audio files \u2014 or click Browse", browse_files:"Browse files\u2026",
     output_folder:"Output folder", output_default:"output subfolder next to each input file", browse:"Browse\u2026", reset:"Reset",
     empty_text:"Drop files and pick a preset to get started",
-    clear_done:"Clear done", stop_all:"Stop all", convert:"Convert",
+    play_wait:"Play while waiting", clear_done:"Clear done", stop_all:"Stop all", convert:"Convert",
     no_jobs:"No jobs", t_pending:"pending", t_converting:"converting", t_done:"done", t_failed:"failed",
     st_pending:"PENDING", st_running:"RUNNING", st_done:"DONE", st_error:"ERROR", st_cancelled:"CANCELLED",
     abort:"Abort", restart:"Restart", rerun:"Re-run", show_file:"Show file", remove:"Remove", show_log:"Show log", hide_log:"Hide log", inspect:"Inspect",
@@ -697,15 +791,21 @@ var LANG = {
   },
   nl: {
     editpresets:"presets.json bewerken", settings:"Instellingen",
-    sec_bg:"Achtergrond", sec_theme:"Kleurthema", sec_scale:"UI-schaal", sec_lang:"Taal", zoom:"Zoom",
+    sec_bg:"Achtergrond", sec_theme:"Kleurthema", sec_scale:"UI-schaal", sec_lang:"Taal", sec_updates:"Updates", zoom:"Zoom",
     fancy:"Mooie graphics", on:"Aan", off:"Uit",
     pat_ambient:"Sfeervol", pat_futuristic:"Futuristisch", pat_waves:"Golven", pat_magic:"Magie", pat_starfield:"Sterren", pat_aurora:"Aurora",
     openpresets:"presets.json openen", reload:"Presets herladen",
+    check_updates:"Controleren op updates", checking_updates:"Controleren op updates\u2026",
+    installed_version:"Ge\u00efnstalleerde versie: {n}", up_to_date:"Je gebruikt de nieuwste versie ({n}).", update_available:"Update {n} is beschikbaar.",
+    update_failed:"Controleren op updates is mislukt.", update_starting:"{n} wordt ge\u00efnstalleerd. Turbo ffmpegger wordt opnieuw gestart.",
+    update_prompt:"Update {n} is beschikbaar. Turbo ffmpegger wordt gesloten, bijgewerkt en opnieuw geopend. Taken in de wachtrij worden gewist. Doorgaan?",
+    update_busy:"Wacht tot de media-analyse klaar is of stop de actieve conversie voordat je bijwerkt.", updater_missing:"Het updatebestand ontbreekt.",
+    update_timeout:"Het controleren duurde te lang. Probeer het opnieuw.",
     filter_ph:"Presets filteren (naam, formaat, kwaliteit)...", fav_only:"Alleen favorieten", compat_only:"Alleen compatibel",
     drop_title:"Sleep bestanden hierheen", drop_sub:"video- & audiobestanden \u2014 of klik op Bladeren", browse_files:"Bladeren\u2026",
     output_folder:"Uitvoermap", output_default:"uitvoer-submap naast elk invoerbestand", browse:"Bladeren\u2026", reset:"Herstellen",
     empty_text:"Sleep bestanden en kies een preset om te beginnen",
-    clear_done:"Voltooide wissen", stop_all:"Alles stoppen", convert:"Converteren",
+    play_wait:"Spelen tijdens het wachten", clear_done:"Voltooide wissen", stop_all:"Alles stoppen", convert:"Converteren",
     no_jobs:"Geen taken", t_pending:"in wachtrij", t_converting:"bezig", t_done:"voltooid", t_failed:"mislukt",
     st_pending:"WACHTRIJ", st_running:"BEZIG", st_done:"VOLTOOID", st_error:"FOUT", st_cancelled:"GEANNULEERD",
     abort:"Afbreken", restart:"Opnieuw", rerun:"Opnieuw", show_file:"Bestand tonen", remove:"Verwijderen", show_log:"Log tonen", hide_log:"Log verbergen", inspect:"Inspecteren",
@@ -720,6 +820,11 @@ var LANG = {
     grp_custom:"Aangepast", new_custom:"+ Nieuwe template", close:"Sluiten"
   },
   ja: {
+    sec_updates:"\u30a2\u30c3\u30d7\u30c7\u30fc\u30c8", check_updates:"\u66f4\u65b0\u30d7\u30ed\u30b0\u30e9\u30e0\u3092\u78ba\u8a8d", checking_updates:"\u66f4\u65b0\u30d7\u30ed\u30b0\u30e9\u30e0\u3092\u78ba\u8a8d\u4e2d\u2026",
+    installed_version:"\u30a4\u30f3\u30b9\u30c8\u30fc\u30eb\u6e08\u307f\u30d0\u30fc\u30b8\u30e7\u30f3: {n}", up_to_date:"\u6700\u65b0\u7248\u3067\u3059 ({n})\u3002", update_available:"\u30a2\u30c3\u30d7\u30c7\u30fc\u30c8 {n} \u3092\u5229\u7528\u3067\u304d\u307e\u3059\u3002",
+    update_failed:"\u66f4\u65b0\u306e\u78ba\u8a8d\u306b\u5931\u6557\u3057\u307e\u3057\u305f\u3002", update_starting:"{n} \u3092\u30a4\u30f3\u30b9\u30c8\u30fc\u30eb\u4e2d\u3067\u3059\u3002Turbo ffmpegger \u3092\u518d\u8d77\u52d5\u3057\u307e\u3059\u3002",
+    update_prompt:"\u30a2\u30c3\u30d7\u30c7\u30fc\u30c8 {n} \u3092\u5229\u7528\u3067\u304d\u307e\u3059\u3002Turbo ffmpegger \u3092\u9589\u3058\u3066\u66f4\u65b0\u3057\u3001\u518d\u5ea6\u958b\u304d\u307e\u3059\u3002\u7d9a\u884c\u3057\u307e\u3059\u304b\uff1f",
+    update_busy:"\u66f4\u65b0\u3059\u308b\u524d\u306b\u3001\u5b9f\u884c\u4e2d\u306e\u5909\u63db\u3092\u5b8c\u4e86\u307e\u305f\u306f\u505c\u6b62\u3057\u3066\u304f\u3060\u3055\u3044\u3002", updater_missing:"\u30a2\u30c3\u30d7\u30c7\u30fc\u30bf\u30fc\u30d5\u30a1\u30a4\u30eb\u304c\u3042\u308a\u307e\u305b\u3093\u3002", update_timeout:"\u66f4\u65b0\u306e\u78ba\u8a8d\u304c\u30bf\u30a4\u30e0\u30a2\u30a6\u30c8\u3057\u307e\u3057\u305f\u3002\u3082\u3046\u4e00\u5ea6\u304a\u8a66\u3057\u304f\u3060\u3055\u3044\u3002",
     editpresets:"presets.json を編集", settings:"設定",
     sec_bg:"背景", sec_theme:"カラーテーマ", sec_scale:"UI スケール", sec_lang:"言語", zoom:"ズーム",
     fancy:"リッチな演出", on:"オン", off:"オフ",
@@ -729,7 +834,7 @@ var LANG = {
     drop_title:"ここにファイルをドロップ", drop_sub:"動画・音声ファイル \u2014 または「参照」をクリック", browse_files:"ファイルを参照\u2026",
     output_folder:"出力フォルダー", output_default:"各入力ファイルの隣の output サブフォルダー", browse:"参照\u2026", reset:"リセット",
     empty_text:"ファイルをドロップしてプリセットを選ぶと開始できます",
-    clear_done:"完了を消去", stop_all:"すべて停止", convert:"変換",
+    play_wait:"待ち時間にプレイ", clear_done:"完了を消去", stop_all:"すべて停止", convert:"変換",
     no_jobs:"ジョブなし", t_pending:"待機中", t_converting:"変換中", t_done:"完了", t_failed:"失敗",
     st_pending:"待機中", st_running:"変換中", st_done:"完了", st_error:"エラー", st_cancelled:"キャンセル",
     abort:"中止", restart:"再実行", rerun:"再実行", show_file:"ファイルを表示", remove:"削除", show_log:"ログを表示", hide_log:"ログを隠す", inspect:"詳細",
@@ -744,6 +849,10 @@ var LANG = {
     grp_custom:"カスタム", new_custom:"＋ 新しいテンプレート", close:"閉じる"
   },
   zh: {
+    sec_updates:"\u66f4\u65b0", check_updates:"\u68c0\u67e5\u66f4\u65b0", checking_updates:"\u6b63\u5728\u68c0\u67e5\u66f4\u65b0\u2026",
+    installed_version:"\u5df2\u5b89\u88c5\u7248\u672c\uff1a{n}", up_to_date:"\u5df2\u662f\u6700\u65b0\u7248\u672c\uff08{n}\uff09\u3002", update_available:"\u6709\u53ef\u7528\u66f4\u65b0 {n}\u3002",
+    update_failed:"\u68c0\u67e5\u66f4\u65b0\u5931\u8d25\u3002", update_starting:"\u6b63\u5728\u5b89\u88c5 {n}\u3002Turbo ffmpegger \u5c06\u91cd\u65b0\u542f\u52a8\u3002", update_prompt:"\u6709\u53ef\u7528\u66f4\u65b0 {n}\u3002Turbo ffmpegger \u5c06\u5173\u95ed\u3001\u5b89\u88c5\u66f4\u65b0\u5e76\u91cd\u65b0\u6253\u5f00\u3002\u662f\u5426\u7ee7\u7eed\uff1f",
+    update_busy:"\u8bf7\u5728\u66f4\u65b0\u524d\u5b8c\u6210\u6216\u505c\u6b62\u5f53\u524d\u8f6c\u6362\u3002", updater_missing:"\u7f3a\u5c11\u66f4\u65b0\u7a0b\u5e8f\u6587\u4ef6\u3002", update_timeout:"\u68c0\u67e5\u66f4\u65b0\u8d85\u65f6\u3002\u8bf7\u91cd\u8bd5\u3002",
     editpresets:"编辑 presets.json", settings:"设置",
     sec_bg:"背景", sec_theme:"配色主题", sec_scale:"界面缩放", sec_lang:"语言", zoom:"缩放",
     fancy:"炫酷特效", on:"开", off:"关",
@@ -753,7 +862,7 @@ var LANG = {
     drop_title:"将文件拖到此处", drop_sub:"视频和音频文件 \u2014 或点击浏览", browse_files:"浏览文件\u2026",
     output_folder:"输出文件夹", output_default:"每个输入文件旁的 output 子文件夹", browse:"浏览\u2026", reset:"重置",
     empty_text:"拖入文件并选择预设即可开始",
-    clear_done:"清除已完成", stop_all:"全部停止", convert:"转换",
+    play_wait:"等待时玩游戏", clear_done:"清除已完成", stop_all:"全部停止", convert:"转换",
     no_jobs:"无任务", t_pending:"待处理", t_converting:"转换中", t_done:"已完成", t_failed:"失败",
     st_pending:"待处理", st_running:"转换中", st_done:"已完成", st_error:"错误", st_cancelled:"已取消",
     abort:"中止", restart:"重试", rerun:"重新运行", show_file:"显示文件", remove:"移除", show_log:"显示日志", hide_log:"隐藏日志", inspect:"详情",
@@ -768,6 +877,10 @@ var LANG = {
     grp_custom:"自定义", new_custom:"+ 新建模板", close:"关闭"
   },
   ko: {
+    sec_updates:"\uc5c5\ub370\uc774\ud2b8", check_updates:"\uc5c5\ub370\uc774\ud2b8 \ud655\uc778", checking_updates:"\uc5c5\ub370\uc774\ud2b8 \ud655\uc778 \uc911\u2026",
+    installed_version:"\uc124\uce58\ub41c \ubc84\uc804: {n}", up_to_date:"\ucd5c\uc2e0 \ubc84\uc804\uc785\ub2c8\ub2e4({n}).", update_available:"\uc5c5\ub370\uc774\ud2b8 {n}\uc744(\ub97c) \uc0ac\uc6a9\ud560 \uc218 \uc788\uc2b5\ub2c8\ub2e4.",
+    update_failed:"\uc5c5\ub370\uc774\ud2b8 \ud655\uc778\uc5d0 \uc2e4\ud328\ud588\uc2b5\ub2c8\ub2e4.", update_starting:"{n}\uc744(\ub97c) \uc124\uce58\ud558\ub294 \uc911\uc785\ub2c8\ub2e4. Turbo ffmpegger\uac00 \ub2e4\uc2dc \uc2dc\uc791\ub429\ub2c8\ub2e4.", update_prompt:"\uc5c5\ub370\uc774\ud2b8 {n}\uc744(\ub97c) \uc0ac\uc6a9\ud560 \uc218 \uc788\uc2b5\ub2c8\ub2e4. Turbo ffmpegger\ub97c \ub2eb\uace0 \uc5c5\ub370\uc774\ud2b8\ud55c \ub2e4\uc74c \ub2e4\uc2dc \uc5f4\uaca0\uc2b5\ub2c8\ub2e4. \uacc4\uc18d\ud560\uae4c\uc694?",
+    update_busy:"\uc5c5\ub370\uc774\ud2b8\ud558\uae30 \uc804\uc5d0 \uc2e4\ud589 \uc911\uc778 \ubcc0\ud658\uc744 \uc644\ub8cc\ud558\uac70\ub098 \uc911\uc9c0\ud558\uc138\uc694.", updater_missing:"\uc5c5\ub370\uc774\ud130 \ud30c\uc77c\uc774 \uc5c6\uc2b5\ub2c8\ub2e4.", update_timeout:"\uc5c5\ub370\uc774\ud2b8 \ud655\uc778 \uc2dc\uac04\uc774 \ucd08\uacfc\ub418\uc5c8\uc2b5\ub2c8\ub2e4. \ub2e4\uc2dc \uc2dc\ub3c4\ud558\uc138\uc694.",
     editpresets:"presets.json 편집", settings:"설정",
     sec_bg:"배경", sec_theme:"색상 테마", sec_scale:"UI 배율", sec_lang:"언어", zoom:"확대/축소",
     fancy:"화려한 그래픽", on:"켜짐", off:"꺼짐",
@@ -777,7 +890,7 @@ var LANG = {
     drop_title:"여기에 파일을 놓으세요", drop_sub:"동영상 및 오디오 파일 \u2014 또는 찾아보기 클릭", browse_files:"파일 찾아보기\u2026",
     output_folder:"출력 폴더", output_default:"각 입력 파일 옆의 output 하위 폴더", browse:"찾아보기\u2026", reset:"재설정",
     empty_text:"파일을 놓고 프리셋을 선택하여 시작하세요",
-    clear_done:"완료 지우기", stop_all:"모두 중지", convert:"변환",
+    play_wait:"기다리는 동안 플레이", clear_done:"완료 지우기", stop_all:"모두 중지", convert:"변환",
     no_jobs:"작업 없음", t_pending:"대기 중", t_converting:"변환 중", t_done:"완료", t_failed:"실패",
     st_pending:"대기 중", st_running:"변환 중", st_done:"완료", st_error:"오류", st_cancelled:"취소됨",
     abort:"중단", restart:"다시 시작", rerun:"다시 실행", show_file:"파일 표시", remove:"제거", show_log:"로그 표시", hide_log:"로그 숨기기", inspect:"정보",
@@ -808,6 +921,7 @@ function applyLanguage() {
   T("btn-editpresets","editpresets");           H("btn-settings","&#9881; "+L("settings"));
   T("settings-bg-title","sec_bg");               T("settings-title","sec_theme");
   T("settings-scale-title","sec_scale");         T("settings-lang-title","sec_lang");
+  T("settings-update-title","sec_updates");
   T("ui-scale-label","zoom");                    T("sp-editbtn","openpresets");
   H("sp-reloadbtn","&#8635; "+L("reload"));
   var sb=document.getElementById("search-box"); if(sb) sb.setAttribute("placeholder", L("filter_ph"));
@@ -818,8 +932,9 @@ function applyLanguage() {
   if(!outputFolder){ H("out-path","&mdash; "+L("output_default")+" &mdash;"); }
   T("btn-pickout","browse");                     H("btn-resetout","&times; "+L("reset"));
   T("empty-text","empty_text");
-  T("btn-clear","clear_done");                   H("btn-stop","&#9632; "+L("stop_all"));   H("btn-run","&#9654; "+L("convert"));
-  renderLangControls(); renderBgControls(); updateTally(); renderPresets(); renderJobs();
+  T("btn-game","play_wait");                    T("btn-clear","clear_done");
+  H("btn-stop","&#9632; "+L("stop_all"));       H("btn-run","&#9654; "+L("convert"));
+  renderLangControls(); renderBgControls(); renderUpdateControls(); updateTally(); renderPresets(); renderJobs();
   dropBridgeUpdateUi();
 }
 function renderLangControls() {
@@ -2336,6 +2451,9 @@ function applyTheme(name) {
   s("toolbar","borderTopColor",t.bord);
   s("toolbar","background",t.surf2);
   s("tally","color",t.muted);
+  styleBtn("btn-game", t);
+  s("btn-game","borderColor",t.ac);
+  s("btn-game","color",t.ac);
   styleBtn("btn-clear", t);
   s("btn-stop","borderColor",t.err);
   s("btn-stop","color",t.err);
@@ -2346,10 +2464,16 @@ function applyTheme(name) {
   // Settings panel
   s("settings-panel","background",t.surf);
   s("settings-panel","borderColor",t.bord);
+  s("settings-bg-title","color",t.muted);
   s("settings-title","color",t.muted);
   s("settings-scale-title","color",t.muted);
+  s("settings-lang-title","color",t.muted);
+  s("settings-update-title","color",t.muted);
+  s("settings-sep0","borderTopColor",t.bord);
   s("settings-sep","borderTopColor",t.bord);
   s("settings-sep2","borderTopColor",t.bord);
+  s("settings-sep3","borderTopColor",t.bord);
+  s("settings-sep4","borderTopColor",t.bord);
   s("ui-scale-label","color",t.muted);
   // re-apply scale button active state
   var scaleIds=[1,1.5,2];
@@ -2362,6 +2486,8 @@ function applyTheme(name) {
   }
   styleSettingsBtn("sp-editbtn", t);
   styleSettingsBtn("sp-reloadbtn", t);
+  styleSettingsBtn("sp-updatebtn", t);
+  renderUpdateControls();
 
   // Swatches — highlight active
   var swIds = ["sw-amber","sw-blue","sw-green","sw-purple","sw-red","sw-light","sw-cyan","sw-rose","sw-slate","sw-sand","sw-mint","sw-midnight","sw-paper","sw-sky","sw-sage","sw-hcdark","sw-hclight","sw-hcamber"];
@@ -2474,6 +2600,7 @@ function fitAppRootToViewport(force) {
     size("editor-overlay", layoutW, layoutH);
     size("inspect-overlay",layoutW, layoutH);
     size("apply-overlay",  layoutW, layoutH);
+    size("game-overlay",   layoutW, layoutH);
 
     var settings = document.getElementById("settings-panel");
     if (settings) settings.style.maxHeight = Math.max(120,layoutH-HEADER_H) + "px";
@@ -2571,11 +2698,222 @@ function renderBgControls() {
 }
 
 // ── Settings panel toggle ───────────────────────────────
+// The PowerShell helper performs network and file operations outside this
+// running HTA. The UI only starts it and watches a small status file.
+function versionPath() { return appFolder() + "\\version.txt"; }
+function updaterScriptPath() { return appFolder() + "\\check_for_updates.ps1"; }
+function appRootFolder() { return fso.GetParentFolderName(appFolder()); }
+
+function isSafeUpdateTag(tag) {
+  return /^v?[0-9A-Za-z][0-9A-Za-z._+-]{0,63}$/.test("" + tag);
+}
+
+function loadAppVersion() {
+  var resolved = APP_VERSION_FALLBACK;
+  try {
+    var p = versionPath();
+    if (fso.FileExists(p)) {
+      var value = readTextFile(p).replace(/^\uFEFF/, "").replace(/^\s+|\s+$/g, "");
+      if (isSafeUpdateTag(value)) resolved = value;
+    }
+  } catch (_) {}
+  APP_VERSION = resolved;
+  return APP_VERSION;
+}
+
+function refreshDisplayedAppVersion() {
+  loadAppVersion();
+  if (!updateChecking && !updateInstalling) {
+    updateStatusKind = "installed";
+    updateStatusValue = "";
+    updateStatusDetail = "";
+  }
+  renderUpdateControls();
+}
+
+function setUpdateStatus(kind, value, detail) {
+  updateStatusKind = kind || "installed";
+  updateStatusValue = value || "";
+  updateStatusDetail = detail || "";
+  renderUpdateControls();
+}
+
+function renderUpdateControls() {
+  var t = getT();
+  var btn = document.getElementById("sp-updatebtn");
+  var label = document.getElementById("update-status");
+  if (btn) {
+    btn.disabled = !!updateChecking;
+    btn.innerHTML = "&#8635; " + (updateChecking ? L("checking_updates") : L("check_updates"));
+    btn.style.borderColor = t.bord;
+    btn.style.color = updateChecking ? t.bordHi : t.muted;
+  }
+  if (!label) return;
+  var version = updateStatusValue || APP_VERSION;
+  var message = L("installed_version", APP_VERSION);
+  if (updateStatusKind === "checking") message = L("checking_updates");
+  else if (updateStatusKind === "current") message = L("up_to_date", version);
+  else if (updateStatusKind === "available") message = L("update_available", version);
+  else if (updateStatusKind === "installing") message = L("update_starting", version);
+  else if (updateStatusKind === "error") {
+    message = L("update_failed");
+    if (updateStatusDetail) message += " " + updateStatusDetail;
+  }
+  label.innerText = message;
+  label.style.color = (updateStatusKind === "error") ? t.err :
+                      (updateStatusKind === "available" || updateStatusKind === "installing") ? t.ac : t.muted;
+}
+
+function updateCommandArg(value) {
+  value = "" + value;
+  if (value.indexOf('"') >= 0) throw new Error("Invalid quote in update path.");
+  return '"' + value + '"';
+}
+
+function buildUpdaterCommand(action, statusPath, expectedTag, scriptPath) {
+  var windowsDir = wsh.ExpandEnvironmentStrings("%SystemRoot%");
+  var powershell = windowsDir + "\\System32\\WindowsPowerShell\\v1.0\\powershell.exe";
+  var cmd = updateCommandArg(powershell) +
+    " -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File " + updateCommandArg(scriptPath || updaterScriptPath()) +
+    " -Action " + action +
+    " -AppRoot " + updateCommandArg(appRootFolder()) +
+    " -CurrentVersion " + updateCommandArg(APP_VERSION) +
+    " -StatusPath " + updateCommandArg(statusPath);
+  if (expectedTag) cmd += " -ExpectedTag " + updateCommandArg(expectedTag);
+  return cmd;
+}
+
+function makeUpdateStatusPath() {
+  var tempDir = "" + fso.GetSpecialFolder(2);
+  var name = "Turbo_ffmpegger_update_" + (new Date()).getTime() + "_" + Math.floor(Math.random() * 100000) + ".txt";
+  return fso.BuildPath(tempDir, name);
+}
+
+function parseUpdateStatus(raw) {
+  var result = {};
+  var lines = ("" + raw).replace(/^\uFEFF/, "").replace(/\r/g, "").split("\n");
+  for (var i = 0; i < lines.length; i++) {
+    var at = lines[i].indexOf("=");
+    if (at <= 0) continue;
+    var key = lines[i].substring(0, at).replace(/^\s+|\s+$/g, "");
+    var value = lines[i].substring(at + 1).replace(/^\s+|\s+$/g, "");
+    result[key] = value;
+  }
+  return result;
+}
+
+function stopUpdatePolling() {
+  if (updateCheckTimer) {
+    window.clearInterval(updateCheckTimer);
+    updateCheckTimer = null;
+  }
+}
+
+function removeUpdateStatusFile() {
+  try {
+    if (updateStatusPath && fso.FileExists(updateStatusPath)) fso.DeleteFile(updateStatusPath, true);
+  } catch (_) {}
+}
+
+function checkForUpdates() {
+  if (updateChecking) return;
+  // version.txt is the single source of truth. Reload it immediately before
+  // building the updater command so an edit made while the HTA is open counts.
+  loadAppVersion();
+  if (!fso.FileExists(updaterScriptPath())) {
+    setUpdateStatus("error", "", L("updater_missing"));
+    return;
+  }
+  stopUpdatePolling();
+  removeUpdateStatusFile();
+  updateStatusPath = makeUpdateStatusPath();
+  updateChecking = true;
+  updateCheckStarted = (new Date()).getTime();
+  setUpdateStatus("checking", "", "");
+  try {
+    wsh.Run(buildUpdaterCommand("Check", updateStatusPath, "", ""), 0, false);
+    updateCheckTimer = window.setInterval(pollUpdateCheck, 250);
+  } catch (e) {
+    updateChecking = false;
+    setUpdateStatus("error", "", e.message || ("" + e));
+  }
+}
+
+function pollUpdateCheck() {
+  if ((new Date()).getTime() - updateCheckStarted > 90000) {
+    stopUpdatePolling();
+    updateChecking = false;
+    removeUpdateStatusFile();
+    setUpdateStatus("error", "", L("update_timeout"));
+    return;
+  }
+  if (!updateStatusPath || !fso.FileExists(updateStatusPath)) return;
+  var status;
+  try { status = parseUpdateStatus(readTextFile(updateStatusPath)); }
+  catch (_) { return; }
+  if (!status.state || status.state === "checking") return;
+
+  stopUpdatePolling();
+  updateChecking = false;
+  removeUpdateStatusFile();
+
+  if (status.state === "up-to-date") {
+    setUpdateStatus("current", status.version || APP_VERSION, "");
+    return;
+  }
+  if (status.state === "available") {
+    var tag = status.version || "";
+    if (!isSafeUpdateTag(tag)) {
+      setUpdateStatus("error", "", L("update_failed"));
+      return;
+    }
+    setUpdateStatus("available", tag, "");
+    if (running || probing) {
+      window.alert(L("update_busy"));
+      return;
+    }
+    if (window.confirm(L("update_prompt", tag))) beginUpdateInstall(tag);
+    return;
+  }
+  setUpdateStatus("error", "", status.message || "");
+}
+
+function beginUpdateInstall(tag) {
+  if (running || probing) {
+    window.alert(L("update_busy"));
+    return;
+  }
+  if (!isSafeUpdateTag(tag) || !fso.FileExists(updaterScriptPath())) {
+    setUpdateStatus("error", "", L("updater_missing"));
+    return;
+  }
+  removeUpdateStatusFile();
+  updateStatusPath = makeUpdateStatusPath();
+  updateInstalling = true;
+  updateChecking = true;
+  setUpdateStatus("installing", tag, "");
+  updateRunButton();
+  try {
+    var tempDir = "" + fso.GetSpecialFolder(2);
+    updateWorkerPath = fso.BuildPath(tempDir, "Turbo_ffmpegger_updater_" + (new Date()).getTime() + "_" + Math.floor(Math.random() * 100000) + ".ps1");
+    fso.CopyFile(updaterScriptPath(), updateWorkerPath, true);
+    wsh.Run(buildUpdaterCommand("Install", updateStatusPath, tag, updateWorkerPath), 0, false);
+    window.setTimeout(function () { dropBridgeStop(); window.close(); }, 350);
+  } catch (e) {
+    try { if (updateWorkerPath && fso.FileExists(updateWorkerPath)) fso.DeleteFile(updateWorkerPath, true); } catch (_) {}
+    updateInstalling = false;
+    updateChecking = false;
+    setUpdateStatus("error", "", e.message || ("" + e));
+    updateRunButton();
+  }
+}
+
 function toggleSettings() {
   var p = document.getElementById("settings-panel");
   if (p.className.indexOf("open") >= 0) {
     p.className = "";
   } else {
+    refreshDisplayedAppVersion();
     p.className = "open";
   }
   dropBridgePublishGeometry(true);
@@ -2638,6 +2976,7 @@ function dropBridgeUiClear() {
   if (dropBridgeElementVisible("editor-overlay")) return false;
   if (dropBridgeElementVisible("inspect-overlay")) return false;
   if (dropBridgeElementVisible("apply-overlay")) return false;
+  if (dropBridgeElementVisible("game-overlay")) return false;
   return true;
 }
 
@@ -2824,13 +3163,14 @@ function dropBridgeStop() {
   } catch(_) {}
 }
 
-window.onbeforeunload = function() { dropBridgeStop(); };
-window.onunload = function() { dropBridgeStop(); };
+window.onbeforeunload = function() { if (waitingGame) waitingGame.destroy(); stopUpdatePolling(); dropBridgeStop(); };
+window.onunload = function() { if (waitingGame) waitingGame.destroy(); dropBridgeStop(); };
 
 // ── Boot ───────────────────────────────────────────────
 window.onload = function() {
   // Keep the window wherever Windows/the user places it; do not force it onto
   // the primary monitor during startup.
+  loadAppVersion();
   loadSettings();   // applies saved scale, which sizes the window
   loadPresets();
   bgAnim.setPattern(bgPattern);
@@ -3832,7 +4172,7 @@ function uniqueOutPath(path, inputPath) {
 
 // ── Queue ────────────────────────────────────────────────
 function startQueue() {
-  if (running) return;
+  if (running || updateInstalling) return;
   var pending=[];
   for (var i=0;i<jobs.length;i++) { if(jobs[i].status==="pending") pending.push(jobs[i]); }
   if (!pending.length||!selectedPreset) return;
@@ -4479,10 +4819,1277 @@ function updateRunButton() {
   var t=getT();
   var hasPending=false;
   for(var i=0;i<jobs.length;i++){if(jobs[i].status==="pending"){hasPending=true;break;}}
-  var ok=hasPending&&selectedPreset&&!running;
+  var ok=hasPending&&selectedPreset&&!running&&!updateInstalling;
   document.getElementById("btn-run").disabled=!ok;
   document.getElementById("btn-run").style.opacity=ok?"1":"0.35";
 }
+
+// -- Play while waiting: VOIDBREAKER -----------------------------------------
+// A dependency-free Invaders/Arkanoid hybrid for the IE9 engine used by HTAs.
+// The game owns only its own timer and event listeners; conversion keeps running.
+var waitingGame = (function () {
+  var W = 720, H = 430, STEP = 1 / 60;
+  var overlay = null, box = null, canvas = null, ctx = null;
+  var timer = null, hudTimer = null, active = false, paused = false, gameOver = false;
+  var initialised = false, controlsAttached = false, bridgeHeld = false;
+  var previousFocus = null;
+  var lastTick = 0, accumulator = 0, lastHud = 0;
+  var keys = {};
+  var stars = [], aliens = [], bricks = [], playerShots = [], enemyShots = [], particles = [], pickups = [], balls = [];
+  var paddle = null;
+  var level = 1, score = 0, lives = 3, highScore = 0;
+  // Easy-to-edit power-up settings. Durations stack when the same timed power
+  // is collected again; multiplication doubles every ball up to MAX_BALLS.
+  var COMBO_TARGET = 3;
+  var LASER_DURATION = 10;
+  var SPEED_DURATION = 5;
+  var FIREBALL_DURATION = 5;
+  var SPEED_MULTIPLIER = 2;
+  var BALL_MULTIPLIER = 2;
+  var MAX_BALLS = 64;
+  var MAX_FALLING_PICKUPS = 64;
+  var PICKUP_FALL_MIN = 78, PICKUP_FALL_MAX = 108, PICKUP_DRIFT = 38;
+  var FIRE_TRAIL_INTERVAL = 0.035;
+  var FIRE_TRAIL_PARTICLES = 2;
+  var MAX_PARTICLES = 320;
+  var PICKUP_TYPES = ["laser", "multiply", "speed", "fire"];
+  var PICKUP_COLORS = { laser:"#20d9ff", multiply:"#8b7bff", speed:"#36e6b4", fire:"#ff7657" };
+  var PICKUP_LABELS = { laser:"L", multiply:"x" + BALL_MULTIPLIER, speed:"S", fire:"F" };
+  var comboHits = 0, weaponTime = 0, speedTime = 0, fireTime = 0;
+  var alienDir = 1, alienSpeed = 28, alienDrop = 12;
+  var enemyCooldown = 0, enemyInterval = 1.5, fireCooldown = 0;
+  var transitionEnd = 0, messageUntil = 0, messageText = "", showRules = false;
+
+  function el(id) { return document.getElementById(id); }
+  function nowMs() { return (new Date()).getTime(); }
+  function clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
+  function randomRange(lo, hi) { return lo + Math.random() * (hi - lo); }
+
+  function hook(obj, name, fn, on) {
+    if (!obj) return;
+    if (on) {
+      if (obj.addEventListener) obj.addEventListener(name, fn, false);
+      else if (obj.attachEvent) obj.attachEvent("on" + name, fn);
+    } else {
+      if (obj.removeEventListener) obj.removeEventListener(name, fn, false);
+      else if (obj.detachEvent) obj.detachEvent("on" + name, fn);
+    }
+  }
+
+  function initialise() {
+    if (initialised) return;
+    initialised = true;
+    overlay = el("game-overlay");
+    box = el("game-box");
+    canvas = el("game-canvas");
+    try { ctx = canvas && canvas.getContext ? canvas.getContext("2d") : null; }
+    catch (_) { ctx = null; }
+
+    if (!ctx) {
+      if (canvas) canvas.style.display = "none";
+      if (box) { box.style.height = "150px"; box.style.marginTop = "-75px"; }
+      var help = el("game-help");
+      if (help) help.innerHTML = "<b>Game unavailable</b><br />Canvas could not start, but the converter is unaffected.";
+      if (el("game-pause")) el("game-pause").style.display = "none";
+      if (el("game-new")) el("game-new").style.display = "none";
+      return;
+    }
+
+    for (var i = 0; i < 55; i++) {
+      stars.push({
+        x: Math.random() * W,
+        y: Math.random() * H,
+        s: Math.random() < 0.78 ? 1 : 2,
+        v: randomRange(5, 18)
+      });
+    }
+    resetGame();
+  }
+
+  function attachControls(on) {
+    if (on === controlsAttached) return;
+    controlsAttached = on;
+    hook(document, "keydown", keyDown, on);
+    hook(document, "keyup", keyUp, on);
+    hook(window, "blur", lostFocus, on);
+    hook(canvas, "mousemove", mouseMove, on);
+    hook(canvas, "click", mouseClick, on);
+  }
+
+  function clearKeys() { keys = {}; }
+  function clearPlayKeys() {
+    keys[32] = false; keys[37] = false; keys[39] = false;
+    keys[65] = false; keys[68] = false;
+  }
+
+  function eventTargetIsButton(e) {
+    var target = e ? (e.target || e.srcElement) : null;
+    return target && ("" + target.tagName).toUpperCase() === "BUTTON";
+  }
+
+  function focusableGameControls() {
+    var candidates = [ctx ? canvas : null, el("game-close"), el("game-pause"), el("game-new")];
+    var result = [];
+    for (var i = 0; i < candidates.length; i++) {
+      var item = candidates[i];
+      if (!item || !item.focus) continue;
+      var display = item.currentStyle ? item.currentStyle.display : item.style.display;
+      if (display !== "none") result.push(item);
+    }
+    return result;
+  }
+
+  function focusGameControl(direction) {
+    var items = focusableGameControls();
+    if (!items.length) return;
+    var current = null;
+    try { current = document.activeElement; } catch (_) {}
+    var index = -1;
+    for (var i = 0; i < items.length; i++) if (items[i] === current) { index = i; break; }
+    if (index < 0) index = direction < 0 ? 0 : -1;
+    index = (index + direction + items.length) % items.length;
+    try { items[index].focus(); } catch (_) {}
+  }
+
+  function suppress(e) {
+    if (!e) return;
+    e.returnValue = false;
+    e.cancelBubble = true;
+    if (e.preventDefault) e.preventDefault();
+    if (e.stopPropagation) e.stopPropagation();
+  }
+
+  function keyDown(ev) {
+    if (!active) return;
+    var e = ev || window.event;
+    var k = e.keyCode || e.which;
+    if ((k === 13 || k === 32) && eventTargetIsButton(e)) return;
+    if (k === 9) {
+      focusGameControl(e.shiftKey ? -1 : 1);
+      suppress(e);
+      return;
+    }
+    var handled = (k === 27 || k === 32 || k === 37 || k === 39 ||
+                   k === 65 || k === 68 || k === 78 || k === 80 || k === 13);
+    if (!handled) return;
+    var first = !keys[k];
+    keys[k] = true;
+
+    if (first && k === 27) close();
+    else if (first && k === 80) togglePause();
+    else if (first && k === 78) newGame();
+    else if (first && k === 13 && gameOver) newGame();
+    else if (first && k === 32) playerAction();
+    suppress(e);
+  }
+
+  function keyUp(ev) {
+    if (!active) return;
+    var e = ev || window.event;
+    var k = e.keyCode || e.which;
+    if (k === 9 || k === 13 || k === 27 || k === 32 || k === 37 || k === 39 ||
+        k === 65 || k === 68 || k === 78 || k === 80) {
+      var wasDown = !!keys[k];
+      keys[k] = false;
+      if ((k === 13 || k === 32) && eventTargetIsButton(e) && !wasDown) return;
+      suppress(e);
+    }
+  }
+
+  function lostFocus() {
+    clearKeys();
+    if (active && !paused && !gameOver) {
+      paused = true;
+      stopLoop();
+      updatePauseButton();
+      draw();
+    }
+  }
+
+  function mouseMove(ev) {
+    if (!active || paused || gameOver || transitionEnd || !canvas || !paddle) return;
+    var e = ev || window.event;
+    var r = canvas.getBoundingClientRect();
+    var rw = r.right - r.left;
+    if (rw <= 0) return;
+    var mx = (e.clientX - r.left) * canvas.width / rw;
+    paddle.x = clamp(mx - paddle.w / 2, 8, W - 8 - paddle.w);
+    positionStuckBalls();
+    if (paused) draw();
+  }
+
+  function mouseClick(ev) {
+    if (!active) return;
+    playerAction();
+    suppress(ev || window.event);
+  }
+
+  function open() {
+    initialise();
+    if (!overlay || active) return;
+    if (dropBridgeElementVisible("editor-overlay") ||
+        dropBridgeElementVisible("inspect-overlay") ||
+        dropBridgeElementVisible("apply-overlay")) return;
+    try { previousFocus = document.activeElement; } catch (_) { previousFocus = null; }
+    active = true;
+    clearKeys();
+    attachControls(true);
+    startHudWatch();
+    if (!bridgeHeld) {
+      dropBridgeSuspend(true);
+      bridgeHeld = true;
+    }
+    if (typeof bgAnim !== "undefined") bgAnim.setEnabled(false);
+    popIn(overlay, box);
+    try {
+      window.focus();
+      var firstControl = ctx ? canvas : el("game-close");
+      if (firstControl && firstControl.focus) firstControl.focus();
+    } catch (_) {}
+    updateHud(true);
+    updatePauseButton();
+    if (ctx) {
+      draw();
+      if (!paused && !gameOver) startLoop();
+    }
+  }
+
+  function close() {
+    if (!active) return;
+    active = false;
+    clearKeys();
+    stopLoop();
+    stopHudWatch();
+    attachControls(false);
+    popOut(overlay, box, function () {
+      if (typeof bgAnim !== "undefined") bgAnim.setEnabled(fancyEnabled);
+      if (bridgeHeld) {
+        bridgeHeld = false;
+        dropBridgeSuspend(false);
+      }
+      try { if (previousFocus && previousFocus.focus) previousFocus.focus(); } catch (_) {}
+      previousFocus = null;
+    });
+  }
+
+  function destroy() {
+    active = false;
+    clearKeys();
+    stopLoop();
+    stopHudWatch();
+    attachControls(false);
+    if (bridgeHeld) {
+      bridgeHeld = false;
+      try { dropBridgeSuspend(false); } catch (_) {}
+    }
+  }
+
+  function startLoop() {
+    if (!active || paused || gameOver || !ctx || timer) return;
+    lastTick = nowMs();
+    accumulator = 0;
+    timer = window.setInterval(tick, 33);
+  }
+
+  function stopLoop() {
+    if (timer) {
+      window.clearInterval(timer);
+      timer = null;
+    }
+  }
+
+  function startHudWatch() {
+    if (!hudTimer) {
+      hudTimer = window.setInterval(function () { if (active) updateHud(true); }, 500);
+    }
+  }
+
+  function stopHudWatch() {
+    if (hudTimer) {
+      window.clearInterval(hudTimer);
+      hudTimer = null;
+    }
+  }
+
+  function tick() {
+    var n = nowMs();
+    var elapsed = Math.min(0.05, (n - lastTick) / 1000);
+    var steps = 0;
+    lastTick = n;
+    accumulator += elapsed;
+    while (accumulator >= STEP && steps < 3) {
+      update(STEP);
+      accumulator -= STEP;
+      steps++;
+    }
+    if (steps === 3) accumulator = 0;
+    updateHud(false);
+    draw();
+  }
+
+  function resetGame() {
+    level = 1;
+    score = 0;
+    lives = 3;
+    paused = false;
+    gameOver = false;
+    transitionEnd = 0;
+    particles = [];
+    pickups = [];
+    comboHits = 0;
+    weaponTime = 0;
+    speedTime = 0;
+    fireTime = 0;
+    showRules = true;
+    setupLevel();
+    updatePauseButton();
+    updateHud(true);
+  }
+
+  function newGame() {
+    initialise();
+    if (!ctx) return;
+    stopLoop();
+    resetGame();
+    draw();
+    if (active) startLoop();
+  }
+
+  function setupLevel() {
+    aliens = [];
+    bricks = [];
+    playerShots = [];
+    enemyShots = [];
+    resetPowers();
+    transitionEnd = 0;
+
+    var difficulty = level - 1;
+    // Asymptotic curves make every level a little harder without allowing
+    // armour or speed to grow into a mathematically unwinnable state.
+    var paddleW = 54 + 50 / (1 + difficulty * 0.055);
+    paddle = { x:(W - paddleW) / 2, y:H - 29, w:paddleW, h:11, speed:390 };
+    resetBalls();
+
+    var rows = Math.min(6, 3 + Math.floor((level - 1) / 3));
+    var cols = Math.min(11, 7 + Math.floor((level - 1) / 4));
+    var alienW = 34, alienH = 20, gapX = 12, gapY = 11;
+    var totalW = cols * alienW + (cols - 1) * gapX;
+    var startX = (W - totalW) / 2;
+    for (var row = 0; row < rows; row++) {
+      for (var col = 0; col < cols; col++) {
+        aliens.push({
+          x:startX + col * (alienW + gapX),
+          y:34 + row * (alienH + gapY),
+          w:alienW, h:alienH, hp:1, maxHp:1, row:row
+        });
+      }
+    }
+
+    var brickRows = Math.min(4, 2 + Math.floor((level - 1) / 10));
+    var brickCols = 10, brickW = 54, brickH = 13, brickGap = 8;
+    var brickTotal = brickCols * brickW + (brickCols - 1) * brickGap;
+    var brickStart = (W - brickTotal) / 2;
+    var maxBrickTier = Math.min(4, 1 + Math.floor(difficulty / 3));
+    var brickPalette = ["#36e6b4", "#ffc857", "#ff7657", "#ff4d8d"];
+    // The formation always starts with at least one more alien than brick.
+    for (row = 0; row < brickRows && bricks.length < aliens.length - 1; row++) {
+      for (col = 0; col < brickCols && bricks.length < aliens.length - 1; col++) {
+        var tier = 1 + ((row * 3 + col + difficulty) % maxBrickTier);
+        var brickHp = tier + 1; // weakest: two bullets, or one two-point ball hit
+        bricks.push({
+          x:brickStart + col * (brickW + brickGap),
+          y:244 + row * (brickH + 6),
+          w:brickW, h:brickH, hp:brickHp, maxHp:brickHp, tier:tier,
+          color:brickPalette[tier - 1]
+        });
+      }
+    }
+
+    alienDir = Math.random() < 0.5 ? -1 : 1;
+    alienSpeed = 28 + 118 * difficulty / (difficulty + 24);
+    alienDrop = 12 + 18 * difficulty / (difficulty + 35);
+    enemyInterval = 0.30 + 1.25 / (1 + difficulty * 0.06);
+    enemyCooldown = 0.8;
+    fireCooldown = 0;
+    messageText = "LEVEL " + level;
+    messageUntil = nowMs() + 950;
+  }
+
+  function createBall() {
+    var difficulty = level - 1;
+    var speed = 230 + 190 * difficulty / (difficulty + 30);
+    return {
+      x:paddle ? paddle.x + paddle.w / 2 : W / 2,
+      y:paddle ? paddle.y - 8 : H - 40,
+      r:5, vx:randomRange(-0.55, 0.55) * speed,
+      vy:-speed, speed:speed, stuck:true, trailCooldown:0
+    };
+  }
+
+  function resetBalls() {
+    balls = [createBall()];
+  }
+
+  function positionStuckBalls() {
+    if (!paddle) return;
+    for (var i = 0; i < balls.length; i++) {
+      if (balls[i].stuck) {
+        balls[i].x = paddle.x + paddle.w / 2;
+        balls[i].y = paddle.y - balls[i].r - 2;
+      }
+    }
+  }
+
+  function ballsWaitingToLaunch() {
+    return balls.length === 1 && balls[0].stuck;
+  }
+
+  function launchBalls() {
+    if (!ballsWaitingToLaunch() || paused || gameOver || transitionEnd) return;
+    var ball = balls[0];
+    ball.stuck = false;
+    showRules = false;
+    messageUntil = 0;
+    var angle = randomRange(-0.72, 0.72);
+    ball.vx = Math.sin(angle) * ball.speed;
+    ball.vy = -Math.cos(angle) * ball.speed;
+    if (Math.abs(ball.vx) < 65) ball.vx = ball.vx < 0 ? -65 : 65;
+  }
+
+  function playerAction() {
+    if (!active || paused || gameOver || transitionEnd || !ctx) return;
+    launchBalls();
+    firePlayerShot();
+  }
+
+  function firePlayerShot() {
+    if (weaponTime <= 0 || fireCooldown > 0 || playerShots.length >= 7 || !paddle) return;
+    playerShots.push({ x:paddle.x + paddle.w / 2 - 2, y:paddle.y - 9, w:4, h:10, vy:-410 });
+    fireCooldown = 0.17;
+  }
+
+  function togglePause() {
+    if (!active || gameOver || !ctx) return;
+    paused = !paused;
+    clearPlayKeys();
+    if (paused) {
+      stopLoop();
+      draw();
+    } else {
+      startLoop();
+    }
+    updatePauseButton();
+  }
+
+  function updatePauseButton() {
+    var b = el("game-pause");
+    if (b) b.innerText = paused ? "RESUME" : "PAUSE";
+  }
+
+  function updateHud(force) {
+    var n = nowMs();
+    if (!force && n - lastHud < 140) return;
+    lastHud = n;
+    if (score > highScore) highScore = score;
+    if (el("game-level")) el("game-level").innerText = level;
+    if (el("game-score")) el("game-score").innerText = score;
+    if (el("game-lives")) el("game-lives").innerText = lives;
+    if (el("game-high")) el("game-high").innerText = highScore;
+    var converterActive = (typeof running !== "undefined" && running);
+    if (el("game-subtitle")) {
+      el("game-subtitle").innerText = converterActive ?
+        "CONVERSION RUNNING \u00b7 INVADERS + ARKANOID" : "INVADERS + ARKANOID";
+    }
+  }
+
+  function update(dt) {
+    updateStars(dt);
+    updateParticles(dt);
+
+    if (transitionEnd) {
+      if (nowMs() >= transitionEnd) {
+        level++;
+        setupLevel();
+      }
+      return;
+    }
+
+    fireCooldown = Math.max(0, fireCooldown - dt);
+    movePaddle(dt);
+    updatePickups(dt);
+    // READY is a safe serve: the player can position the paddle without the
+    // formation descending or firing before Space/click launches the ball.
+    if (ballsWaitingToLaunch()) return;
+    weaponTime = Math.max(0, weaponTime - dt);
+    speedTime = Math.max(0, speedTime - dt);
+    fireTime = Math.max(0, fireTime - dt);
+    enemyCooldown -= dt;
+    moveAliens(dt);
+    if (gameOver) return;
+
+    if (keys[32]) firePlayerShot();
+    updatePlayerShots(dt);
+    updateEnemyShots(dt);
+    if (gameOver) return;
+    if (updateBalls(dt) || gameOver) return;
+
+    if (!aliens.length) completeLevel();
+  }
+
+  function updateStars(dt) {
+    for (var i = 0; i < stars.length; i++) {
+      stars[i].y += stars[i].v * dt;
+      if (stars[i].y >= H) {
+        stars[i].y -= H;
+        stars[i].x = Math.random() * W;
+      }
+    }
+  }
+
+  function updateParticles(dt) {
+    for (var i = particles.length - 1; i >= 0; i--) {
+      var p = particles[i];
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vy += 35 * dt;
+      p.life -= dt;
+      if (p.life <= 0) particles.splice(i, 1);
+    }
+  }
+
+  function registerComboHit(x, y) {
+    comboHits++;
+    if (comboHits < COMBO_TARGET) return;
+    comboHits = 0;
+    spawnRandomPickup(x, y);
+  }
+
+  function spawnRandomPickup(x, y) {
+    var type = PICKUP_TYPES[Math.floor(Math.random() * PICKUP_TYPES.length)];
+    if (pickups.length >= MAX_FALLING_PICKUPS) pickups.shift();
+    pickups.push({
+      x:clamp(x - 9, 8, W - 26), y:clamp(y - 9, 20, H - 100),
+      w:18, h:18, vx:randomRange(-PICKUP_DRIFT, PICKUP_DRIFT),
+      vy:randomRange(PICKUP_FALL_MIN, PICKUP_FALL_MAX),
+      type:type, color:PICKUP_COLORS[type], label:PICKUP_LABELS[type],
+      phase:Math.random() * Math.PI * 2
+    });
+    spawnBurst(x, y, PICKUP_COLORS[type], 8);
+  }
+
+  function collectPickup(type) {
+    if (type === "laser") weaponTime += LASER_DURATION;
+    else if (type === "speed") speedTime += SPEED_DURATION;
+    else if (type === "fire") fireTime += FIREBALL_DURATION;
+    else if (type === "multiply") multiplyBalls();
+  }
+
+  function multiplyBalls() {
+    var originalCount = balls.length;
+    var targetCount = Math.min(MAX_BALLS, originalCount * BALL_MULTIPLIER);
+    for (var i = originalCount; i < targetCount; i++) {
+      var source = balls[(i - originalCount) % originalCount];
+      var copyNumber = Math.floor(i / originalCount);
+      var turn = ((i + copyNumber) % 2 ? -1 : 1) * randomRange(0.20, 0.34) * copyNumber;
+      var cos = Math.cos(turn), sin = Math.sin(turn);
+      balls.push({
+        x:source.x, y:source.y, r:source.r,
+        vx:source.vx * cos - source.vy * sin,
+        vy:source.vx * sin + source.vy * cos,
+        speed:source.speed, stuck:false, trailCooldown:0
+      });
+    }
+  }
+
+  function updatePickups(dt) {
+    for (var i = pickups.length - 1; i >= 0; i--) {
+      var p = pickups[i];
+      p.phase += dt * 5;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      if (p.x < 6) { p.x = 6; p.vx = Math.abs(p.vx); }
+      else if (p.x + p.w > W - 6) { p.x = W - 6 - p.w; p.vx = -Math.abs(p.vx); }
+      if (rectHit(p.x, p.y, p.w, p.h, paddle.x, paddle.y, paddle.w, paddle.h)) {
+        collectPickup(p.type);
+        score += 120 * level;
+        spawnBurst(p.x + p.w / 2, p.y + p.h / 2, p.color, 16);
+        pickups.splice(i, 1);
+      } else if (p.y > H) {
+        pickups.splice(i, 1);
+      }
+    }
+  }
+
+  function movePaddle(dt) {
+    var dir = 0;
+    if (keys[37] || keys[65]) dir--;
+    if (keys[39] || keys[68]) dir++;
+    if (dir) paddle.x += dir * paddle.speed * dt;
+    paddle.x = clamp(paddle.x, 8, W - 8 - paddle.w);
+    positionStuckBalls();
+  }
+
+  function moveAliens(dt) {
+    if (!aliens.length) return;
+    var dx = alienDir * alienSpeed * dt;
+    var minX = W, maxX = 0, maxY = 0;
+    var i;
+    for (i = 0; i < aliens.length; i++) {
+      aliens[i].x += dx;
+      if (aliens[i].x < minX) minX = aliens[i].x;
+      if (aliens[i].x + aliens[i].w > maxX) maxX = aliens[i].x + aliens[i].w;
+      if (aliens[i].y + aliens[i].h > maxY) maxY = aliens[i].y + aliens[i].h;
+    }
+
+    var correction = 0;
+    if (maxX > W - 14) {
+      correction = W - 14 - maxX;
+      alienDir = -1;
+    } else if (minX < 14) {
+      correction = 14 - minX;
+      alienDir = 1;
+    }
+    if (correction) {
+      maxY = 0;
+      for (i = 0; i < aliens.length; i++) {
+        aliens[i].x += correction;
+        aliens[i].y += alienDrop;
+        if (aliens[i].y + aliens[i].h > maxY) maxY = aliens[i].y + aliens[i].h;
+      }
+    }
+
+    // Kamikaze rule: touching pairs are removed one-for-one. Recompute the
+    // lowest survivor so a destroyed alien cannot also cost the player a life.
+    if (maxY >= 244 && bricks.length && resolveAlienBrickImpacts()) {
+      maxY = 0;
+      for (i = 0; i < aliens.length; i++) {
+        if (aliens[i].y + aliens[i].h > maxY) maxY = aliens[i].y + aliens[i].h;
+      }
+    }
+
+    if (maxY >= paddle.y - 8) {
+      loseLife(paddle.x + paddle.w / 2, paddle.y, "#ff4d67");
+      for (i = 0; i < aliens.length; i++) aliens[i].y -= 38;
+      return;
+    }
+
+    if (enemyCooldown <= 0 && enemyShots.length < 14) {
+      fireEnemyShot();
+      enemyCooldown = enemyInterval * randomRange(0.72, 1.18);
+    }
+  }
+
+  function resolveAlienBrickImpacts() {
+    var impacted = false;
+    for (var ai = aliens.length - 1; ai >= 0; ai--) {
+      var a = aliens[ai];
+      for (var bi = bricks.length - 1; bi >= 0; bi--) {
+        var b = bricks[bi];
+        if (rectTouch(a.x, a.y, a.w, a.h, b.x, b.y, b.w, b.h)) {
+          spawnBurst(a.x + a.w / 2, a.y + a.h / 2, alienColor(a.row), 10);
+          spawnBurst(b.x + b.w / 2, b.y + b.h / 2, b.color, 10);
+          aliens.splice(ai, 1);
+          bricks.splice(bi, 1);
+          impacted = true;
+          break; // this alien dies with its first brick and cannot break another
+        }
+      }
+    }
+    return impacted;
+  }
+
+  function fireEnemyShot() {
+    if (!aliens.length) return;
+    var a = aliens[Math.floor(Math.random() * aliens.length)];
+    var difficulty = level - 1;
+    var speed = 145 + 235 * difficulty / (difficulty + 35);
+    enemyShots.push({ x:a.x + a.w / 2 - 2, y:a.y + a.h, w:4, h:11, vy:speed });
+  }
+
+  function updatePlayerShots(dt) {
+    for (var i = playerShots.length - 1; i >= 0; i--) {
+      var s = playerShots[i];
+      s.y += s.vy * dt;
+      if (s.y + s.h < 0) {
+        playerShots.splice(i, 1);
+        continue;
+      }
+      var hit = false;
+      var j;
+      for (j = bricks.length - 1; j >= 0; j--) {
+        if (rectHit(s.x, s.y, s.w, s.h, bricks[j].x, bricks[j].y, bricks[j].w, bricks[j].h)) {
+          damageBrick(j, s.x, s.y, "playerShot");
+          hit = true;
+          break;
+        }
+      }
+      if (!hit) {
+        for (j = aliens.length - 1; j >= 0; j--) {
+          if (rectHit(s.x, s.y, s.w, s.h, aliens[j].x, aliens[j].y, aliens[j].w, aliens[j].h)) {
+            damageAlien(j, s.x, s.y, "playerShot");
+            hit = true;
+            break;
+          }
+        }
+      }
+      if (hit) playerShots.splice(i, 1);
+    }
+  }
+
+  function updateEnemyShots(dt) {
+    for (var i = enemyShots.length - 1; i >= 0; i--) {
+      var s = enemyShots[i];
+      s.y += s.vy * dt;
+      var hit = false;
+      for (var j = bricks.length - 1; j >= 0; j--) {
+        if (rectHit(s.x, s.y, s.w, s.h, bricks[j].x, bricks[j].y, bricks[j].w, bricks[j].h)) {
+          damageBrick(j, s.x, s.y, "enemyShot");
+          hit = true;
+          break;
+        }
+      }
+      if (hit) {
+        enemyShots.splice(i, 1);
+        continue;
+      }
+      if (rectHit(s.x, s.y, s.w, s.h, paddle.x, paddle.y, paddle.w, paddle.h)) {
+        enemyShots.splice(i, 1);
+        loseLife(s.x, paddle.y, "#ff4d67");
+        return;
+      }
+      if (s.y > H) enemyShots.splice(i, 1);
+    }
+  }
+
+  function updateBalls(dt) {
+    var motionScale = speedTime > 0 ? SPEED_MULTIPLIER : 1;
+    var substeps = Math.max(1, Math.ceil(motionScale));
+    var slice = dt * motionScale / substeps;
+    for (var step = 0; step < substeps; step++) {
+      for (var i = balls.length - 1; i >= 0; i--) {
+        if (updateOneBall(balls[i], slice)) return true;
+      }
+    }
+    return false;
+  }
+
+  function updateOneBall(ball, dt) {
+    if (!ball || ball.stuck) return false;
+    var oldX = ball.x, oldY = ball.y;
+    ball.x += ball.vx * dt;
+    ball.y += ball.vy * dt;
+    if (fireTime > 0) addFireTrail(ball, dt);
+    else ball.trailCooldown = 0;
+
+    if (ball.x - ball.r < 4) {
+      ball.x = 4 + ball.r;
+      ball.vx = Math.abs(ball.vx);
+    } else if (ball.x + ball.r > W - 4) {
+      ball.x = W - 4 - ball.r;
+      ball.vx = -Math.abs(ball.vx);
+    }
+    if (ball.y - ball.r < 4) {
+      ball.y = 4 + ball.r;
+      ball.vy = Math.abs(ball.vy);
+    }
+    if (ball.y - ball.r > H) {
+      comboHits = 0;
+      if (balls.length > 1) {
+        for (var lost = balls.length - 1; lost >= 0; lost--) {
+          if (balls[lost] === ball) { balls.splice(lost, 1); break; }
+        }
+        spawnBurst(ball.x, H - 5, "#20d9ff", 8);
+        return false;
+      }
+      loseLife(ball.x, H - 5, "#20d9ff");
+      return true;
+    }
+
+    if (ball.vy > 0 &&
+        circleRect(ball.x, ball.y, ball.r, paddle.x, paddle.y, paddle.w, paddle.h)) {
+      ball.y = paddle.y - ball.r - 1;
+      var offset = (ball.x - (paddle.x + paddle.w / 2)) / (paddle.w / 2);
+      var speed = ball.speed;
+      ball.vx = clamp(offset * speed * 0.90, -speed * 0.90, speed * 0.90);
+      if (Math.abs(ball.vx) < 52) ball.vx = ball.vx < 0 ? -52 : 52;
+      ball.vy = -Math.sqrt(Math.max(1, speed * speed - ball.vx * ball.vx));
+      comboHits = 0;
+      spawnBurst(ball.x, ball.y, fireTime > 0 ? "#ff7657" : "#20d9ff", 4);
+    }
+
+    var i, hitSurface = false;
+    if (fireTime > 0) {
+      // Fireballs destroy every touched target and continue without bouncing.
+      for (i = bricks.length - 1; i >= 0; i--) {
+        if (circleRect(ball.x, ball.y, ball.r, bricks[i].x, bricks[i].y, bricks[i].w, bricks[i].h)) {
+          damageBrick(i, ball.x, ball.y, "fireBall");
+        }
+      }
+      for (i = aliens.length - 1; i >= 0; i--) {
+        if (circleRect(ball.x, ball.y, ball.r, aliens[i].x, aliens[i].y, aliens[i].w, aliens[i].h)) {
+          damageAlien(i, ball.x, ball.y, "fireBall");
+        }
+      }
+      return false;
+    }
+
+    for (i = bricks.length - 1; i >= 0; i--) {
+      if (circleRect(ball.x, ball.y, ball.r, bricks[i].x, bricks[i].y, bricks[i].w, bricks[i].h)) {
+        bounceFromRect(ball, oldX, oldY, bricks[i]);
+        damageBrick(i, ball.x, ball.y, "ball");
+        hitSurface = true;
+        break;
+      }
+    }
+    if (!hitSurface) {
+      for (i = aliens.length - 1; i >= 0; i--) {
+        if (circleRect(ball.x, ball.y, ball.r, aliens[i].x, aliens[i].y, aliens[i].w, aliens[i].h)) {
+          bounceFromRect(ball, oldX, oldY, aliens[i]);
+          damageAlien(i, ball.x, ball.y, "ball");
+          break;
+        }
+      }
+    }
+    return false;
+  }
+
+  function bounceFromRect(ball, oldX, oldY, r) {
+    var gap = 0.25;
+    if (oldY + ball.r <= r.y) {
+      ball.y = r.y - ball.r - gap;
+      ball.vy = -Math.abs(ball.vy);
+      return;
+    }
+    if (oldY - ball.r >= r.y + r.h) {
+      ball.y = r.y + r.h + ball.r + gap;
+      ball.vy = Math.abs(ball.vy);
+      return;
+    }
+    if (oldX + ball.r <= r.x) {
+      ball.x = r.x - ball.r - gap;
+      ball.vx = -Math.abs(ball.vx);
+      return;
+    }
+    if (oldX - ball.r >= r.x + r.w) {
+      ball.x = r.x + r.w + ball.r + gap;
+      ball.vx = Math.abs(ball.vx);
+      return;
+    }
+
+    // If a fast frame began already intersecting, choose the shallowest exit.
+    var penTop = ball.y + ball.r - r.y;
+    var penBottom = r.y + r.h - (ball.y - ball.r);
+    var penLeft = ball.x + ball.r - r.x;
+    var penRight = r.x + r.w - (ball.x - ball.r);
+    var minPen = Math.min(penTop, penBottom, penLeft, penRight);
+    if (minPen === penTop) {
+      ball.y = r.y - ball.r - gap; ball.vy = -Math.abs(ball.vy);
+    } else if (minPen === penBottom) {
+      ball.y = r.y + r.h + ball.r + gap; ball.vy = Math.abs(ball.vy);
+    } else if (minPen === penLeft) {
+      ball.x = r.x - ball.r - gap; ball.vx = -Math.abs(ball.vx);
+    } else {
+      ball.x = r.x + r.w + ball.r + gap; ball.vx = Math.abs(ball.vx);
+    }
+  }
+
+  function rectHit(x, y, w, h, rx, ry, rw, rh) {
+    return x < rx + rw && x + w > rx && y < ry + rh && y + h > ry;
+  }
+
+  function rectTouch(x, y, w, h, rx, ry, rw, rh) {
+    return x <= rx + rw && x + w >= rx && y <= ry + rh && y + h >= ry;
+  }
+
+  function circleRect(cx, cy, radius, rx, ry, rw, rh) {
+    var nx = clamp(cx, rx, rx + rw);
+    var ny = clamp(cy, ry, ry + rh);
+    var dx = cx - nx, dy = cy - ny;
+    return dx * dx + dy * dy <= radius * radius;
+  }
+
+  function damageBrick(index, x, y, source) {
+    var b = bricks[index];
+    if (!b) return;
+    var playerHit = source !== "enemyShot";
+    var comboHit = source === "ball" || source === "fireBall";
+    var damage = source === "fireBall" ? b.hp : (source === "ball" ? 2 : 1);
+    b.hp -= damage;
+    if (playerHit) {
+      score += 8 * level;
+      if (comboHit) registerComboHit(x, y);
+    }
+    spawnBurst(x, y, b.color, b.hp <= 0 ? 8 : 3);
+    if (b.hp <= 0) {
+      if (playerHit) score += 28 * level;
+      bricks.splice(index, 1);
+    }
+  }
+
+  function damageAlien(index, x, y, source) {
+    var a = aliens[index];
+    if (!a) return;
+    a.hp = 0;
+    score += 12 * level;
+    if (source === "ball" || source === "fireBall") registerComboHit(x, y);
+    var color = alienColor(a.row);
+    spawnBurst(x, y, color, 10);
+    score += 90 * level;
+    aliens.splice(index, 1);
+    alienSpeed += 0.75;
+  }
+
+  function alienColor(row) {
+    var colors = ["#20d9ff", "#8b7bff", "#ff4d8d", "#36e6b4", "#ffc857", "#ff7657"];
+    return colors[(row + level - 1) % colors.length];
+  }
+
+  function spawnBurst(x, y, color, count) {
+    for (var i = 0; i < count && particles.length < MAX_PARTICLES; i++) {
+      particles.push({
+        x:x, y:y, vx:randomRange(-95, 95), vy:randomRange(-115, 55),
+        life:randomRange(0.25, 0.58), max:0.58, color:color, size:Math.random() < 0.7 ? 2 : 3
+      });
+    }
+  }
+
+  function addFireTrail(ball, dt) {
+    ball.trailCooldown = (ball.trailCooldown || 0) - dt;
+    if (ball.trailCooldown > 0) return;
+    ball.trailCooldown = FIRE_TRAIL_INTERVAL;
+    var colors = ["#ff3b30", "#ff7657", "#ffc857", "#fff2a8"];
+    var magnitude = Math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy) || 1;
+    var tailX = ball.x - ball.vx / magnitude * (ball.r + 2);
+    var tailY = ball.y - ball.vy / magnitude * (ball.r + 2);
+    for (var i = 0; i < FIRE_TRAIL_PARTICLES && particles.length < MAX_PARTICLES; i++) {
+      var life = randomRange(0.18, 0.38);
+      particles.push({
+        x:tailX + randomRange(-2, 2), y:tailY + randomRange(-2, 2),
+        vx:-ball.vx * 0.06 + randomRange(-24, 24),
+        vy:-ball.vy * 0.06 + randomRange(-30, 12),
+        life:life, max:life, color:colors[Math.floor(Math.random() * colors.length)],
+        size:Math.random() < 0.55 ? 2 : 3
+      });
+    }
+  }
+
+  function resetPowers() {
+    pickups = [];
+    comboHits = 0;
+    weaponTime = 0;
+    speedTime = 0;
+    fireTime = 0;
+  }
+
+  function loseLife(x, y, color) {
+    if (gameOver || transitionEnd) return;
+    spawnBurst(x, y, color, 18);
+    lives--;
+    playerShots = [];
+    enemyShots = [];
+    resetPowers();
+    if (lives <= 0) {
+      lives = 0;
+      gameOver = true;
+      paused = false;
+      messageText = "GAME OVER";
+      stopLoop();
+      updatePauseButton();
+      updateHud(true);
+      draw();
+      return;
+    }
+    resetBalls();
+    enemyCooldown = Math.max(enemyCooldown, 0.7);
+    messageText = "SHIP LOST";
+    messageUntil = nowMs() + 900;
+    updateHud(true);
+  }
+
+  function completeLevel() {
+    if (transitionEnd) return;
+    score += 500 * level;
+    transitionEnd = nowMs() + 1200;
+    playerShots = [];
+    enemyShots = [];
+    resetPowers();
+    resetBalls();
+    spawnBurst(W / 2, H / 2, "#ffc857", 24);
+    updateHud(true);
+  }
+
+  function draw() {
+    if (!ctx) return;
+    ctx.save();
+    ctx.fillStyle = "#02040c";
+    ctx.fillRect(0, 0, W, H);
+    drawBackdrop();
+    drawBricks();
+    drawAliens();
+    drawShots();
+    drawPickups();
+    drawPaddle();
+    drawBalls();
+    drawParticles();
+    drawPowerStatus();
+    drawOverlayMessage();
+    drawRulesPopup();
+    ctx.restore();
+  }
+
+  function drawBackdrop() {
+    var i;
+    for (i = 0; i < stars.length; i++) {
+      ctx.globalAlpha = stars[i].s === 1 ? 0.42 : 0.72;
+      ctx.fillStyle = stars[i].s === 1 ? "#6e8aad" : "#c7f6ff";
+      ctx.fillRect(Math.round(stars[i].x), Math.round(stars[i].y), stars[i].s, stars[i].s);
+    }
+    ctx.globalAlpha = 0.10;
+    ctx.strokeStyle = "#20d9ff";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (i = 0; i <= W; i += 60) { ctx.moveTo(i, 0); ctx.lineTo(i, H); }
+    for (i = 0; i <= H; i += 50) { ctx.moveTo(0, i); ctx.lineTo(W, i); }
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+
+  function drawBricks() {
+    for (var i = 0; i < bricks.length; i++) {
+      var b = bricks[i];
+      var alpha = 0.46 + 0.54 * (b.hp / b.maxHp);
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = b.color;
+      ctx.fillRect(Math.round(b.x), Math.round(b.y), b.w, b.h);
+      ctx.globalAlpha = 0.34;
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(Math.round(b.x) + 2, Math.round(b.y) + 2, b.w - 4, 2);
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = "#08111f";
+      ctx.strokeRect(Math.round(b.x) + 0.5, Math.round(b.y) + 0.5, b.w - 1, b.h - 1);
+      var damage = b.maxHp - b.hp;
+      if (damage > 0) {
+        var bx = Math.round(b.x), by = Math.round(b.y);
+        var cx = bx + Math.round(b.w / 2), cy = by + Math.round(b.h / 2);
+        ctx.globalAlpha = 0.88;
+        ctx.strokeStyle = "#07101e";
+        ctx.beginPath();
+        ctx.moveTo(cx - 13, by + 1); ctx.lineTo(cx - 4, cy); ctx.lineTo(cx - 10, by + b.h - 1);
+        ctx.moveTo(cx - 4, cy); ctx.lineTo(cx + 6, cy - 3); ctx.lineTo(cx + 14, by + b.h - 1);
+        if (damage > 1) {
+          ctx.moveTo(cx + 6, cy - 3); ctx.lineTo(cx + 17, by + 1);
+          ctx.moveTo(cx + 4, cy - 2); ctx.lineTo(cx + 2, by + b.h - 1);
+        }
+        if (damage > 2) {
+          ctx.moveTo(cx - 4, cy); ctx.lineTo(bx + 3, cy + 2);
+        }
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+    }
+  }
+
+  function drawAliens() {
+    for (var i = 0; i < aliens.length; i++) {
+      var a = aliens[i], x = Math.round(a.x), y = Math.round(a.y);
+      var color = alienColor(a.row);
+      ctx.globalAlpha = 0.60 + 0.40 * (a.hp / a.maxHp);
+      ctx.fillStyle = color;
+      ctx.fillRect(x + 7, y, a.w - 14, 4);
+      ctx.fillRect(x + 3, y + 4, a.w - 6, 4);
+      ctx.fillRect(x, y + 8, a.w, 8);
+      ctx.fillRect(x + 4, y + 16, 7, 4);
+      ctx.fillRect(x + a.w - 11, y + 16, 7, 4);
+      ctx.fillStyle = "#02040c";
+      ctx.fillRect(x + 8, y + 9, 4, 4);
+      ctx.fillRect(x + a.w - 12, y + 9, 4, 4);
+      ctx.globalAlpha = 1;
+      if (a.maxHp > 1) {
+        ctx.fillStyle = "#17263b";
+        ctx.fillRect(x, y - 4, a.w, 2);
+        ctx.fillStyle = color;
+        ctx.fillRect(x, y - 4, Math.round(a.w * a.hp / a.maxHp), 2);
+      }
+    }
+  }
+
+  function drawShots() {
+    var i, s;
+    ctx.fillStyle = "#c7f6ff";
+    for (i = 0; i < playerShots.length; i++) {
+      s = playerShots[i];
+      ctx.fillRect(Math.round(s.x), Math.round(s.y), s.w, s.h);
+      ctx.fillStyle = "#20d9ff";
+      ctx.fillRect(Math.round(s.x) - 1, Math.round(s.y + 3), s.w + 2, 4);
+      ctx.fillStyle = "#c7f6ff";
+    }
+    ctx.fillStyle = "#ff4d67";
+    for (i = 0; i < enemyShots.length; i++) {
+      s = enemyShots[i];
+      ctx.fillRect(Math.round(s.x), Math.round(s.y), s.w, s.h);
+    }
+  }
+
+  function drawPickups() {
+    for (var i = 0; i < pickups.length; i++) {
+      var p = pickups[i];
+      var cx = Math.round(p.x + p.w / 2);
+      var cy = Math.round(p.y + p.h / 2 + Math.sin(p.phase) * 2);
+      ctx.globalAlpha = 0.92;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - 11);
+      ctx.lineTo(cx + 11, cy);
+      ctx.lineTo(cx, cy + 11);
+      ctx.lineTo(cx - 11, cy);
+      ctx.closePath();
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = "#ffffff";
+      ctx.stroke();
+      ctx.fillStyle = "#02040c";
+      ctx.font = p.label === "x2" ? "bold 8px Consolas" : "bold 11px Consolas";
+      ctx.textAlign = "center";
+      ctx.fillText(p.label, cx, cy + 4);
+      ctx.textAlign = "left";
+    }
+  }
+
+  function drawPowerStatus() {
+    ctx.font = "bold 11px Consolas";
+    ctx.textAlign = "left";
+    ctx.fillStyle = comboHits ? "#ffc857" : "#6e8aad";
+    ctx.fillText("COMBO " + comboHits + "/" + COMBO_TARGET, 12, 18);
+    ctx.textAlign = "right";
+    var status = [];
+    if (balls.length > 1) status.push("BALLS x" + balls.length);
+    if (weaponTime > 0) status.push("LASER " + shortTime(weaponTime));
+    if (speedTime > 0) status.push("SPEED " + shortTime(speedTime));
+    if (fireTime > 0) status.push("FIRE " + shortTime(fireTime));
+    ctx.fillStyle = status.length ? "#ffc857" : "#6e8aad";
+    ctx.fillText(status.length ? status.join("  |  ") : "NO POWER", W - 12, 18);
+    ctx.textAlign = "left";
+  }
+
+  function shortTime(value) {
+    return (Math.ceil(value * 10) / 10) + "s";
+  }
+
+  function drawPaddle() {
+    if (!paddle) return;
+    var x = Math.round(paddle.x), y = Math.round(paddle.y);
+    ctx.fillStyle = weaponTime > 0 ? "#ffc857" : "#20d9ff";
+    ctx.fillRect(x, y, paddle.w, paddle.h);
+    ctx.fillStyle = "#c7f6ff";
+    ctx.fillRect(x + 4, y + 2, paddle.w - 8, 3);
+    ctx.fillStyle = "#8b7bff";
+    ctx.beginPath();
+    ctx.moveTo(x + paddle.w / 2, y - 11);
+    ctx.lineTo(x + paddle.w / 2 - 10, y + 2);
+    ctx.lineTo(x + paddle.w / 2 + 10, y + 2);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  function drawBalls() {
+    for (var i = 0; i < balls.length; i++) {
+      var ball = balls[i];
+      ctx.fillStyle = fireTime > 0 ? "#ff7657" : (speedTime > 0 ? "#36e6b4" : "#20d9ff");
+      ctx.beginPath();
+      ctx.arc(ball.x, ball.y, ball.r + (fireTime > 0 ? 3 : 2), 0, Math.PI * 2, false);
+      ctx.fill();
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.arc(ball.x - 1, ball.y - 1, ball.r - 1, 0, Math.PI * 2, false);
+      ctx.fill();
+    }
+  }
+
+  function drawParticles() {
+    for (var i = 0; i < particles.length; i++) {
+      var p = particles[i];
+      ctx.globalAlpha = clamp(p.life / p.max, 0, 1);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(Math.round(p.x), Math.round(p.y), p.size, p.size);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawRulesPopup() {
+    if (!showRules || paused || gameOver || transitionEnd) return;
+    ctx.globalAlpha = 0.94;
+    ctx.fillStyle = "#07101e";
+    ctx.fillRect(116, 92, 488, 246);
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = "#20d9ff";
+    ctx.strokeRect(116.5, 92.5, 487, 245);
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#20d9ff";
+    ctx.font = "bold 22px Consolas";
+    ctx.fillText("HOW TO PLAY", W / 2, 124);
+    ctx.fillStyle = "#c7f6ff";
+    ctx.font = "12px Segoe UI";
+    ctx.fillText("Destroy every alien to clear the level.", W / 2, 153);
+    ctx.fillText("Bricks protect you and award points, but breaking them is optional.", W / 2, 174);
+    ctx.fillText("Three ball hits before a paddle return drop a random power-up.", W / 2, 195);
+    ctx.fillStyle = "#ffc857";
+    ctx.fillText("L laser   |   x2 multiball   |   S double speed   |   F fireball", W / 2, 219);
+    ctx.fillStyle = "#8ea4bd";
+    ctx.fillText("Move: mouse, Left / Right, or A / D", W / 2, 247);
+    ctx.fillText("Space or click: launch / fire   |   P pause   |   N restart   |   Esc close", W / 2, 268);
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 12px Segoe UI";
+    ctx.fillText("Press SPACE or click to begin", W / 2, 307);
+    ctx.textAlign = "left";
+  }
+
+  function drawOverlayMessage() {
+    if (showRules && !paused && !gameOver && !transitionEnd) return;
+    var n = nowMs();
+    var title = "", sub = "";
+    if (gameOver) {
+      title = "GAME OVER";
+      sub = "Press Enter or NEW GAME to try again";
+    } else if (paused) {
+      title = "PAUSED";
+      sub = "Press P or RESUME";
+    } else if (transitionEnd) {
+      title = "SECTOR CLEARED";
+      sub = "Level " + (level + 1) + " incoming";
+    } else if (n < messageUntil) {
+      title = messageText;
+      sub = "Space or click to launch";
+    } else if (ballsWaitingToLaunch()) {
+      title = "READY";
+      sub = "Space or click to launch";
+    }
+    if (!title) return;
+
+    ctx.globalAlpha = 0.72;
+    ctx.fillStyle = "#02040c";
+    ctx.fillRect(185, 174, 350, 82);
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = gameOver ? "#ff4d67" : "#20d9ff";
+    ctx.strokeRect(185.5, 174.5, 349, 81);
+    ctx.textAlign = "center";
+    ctx.fillStyle = gameOver ? "#ff4d67" : "#c7f6ff";
+    ctx.font = "bold 22px Consolas";
+    ctx.fillText(title, W / 2, 207);
+    ctx.fillStyle = "#8ea4bd";
+    ctx.font = "11px Segoe UI";
+    ctx.fillText(sub, W / 2, 231);
+    ctx.textAlign = "left";
+  }
+
+  return {
+    open:open,
+    close:close,
+    newGame:newGame,
+    togglePause:togglePause,
+    destroy:destroy
+  };
+})();
+
 function ffmpegPath() {
   var local=appFolder()+"\\ffmpeg.exe";
   if(fso.FileExists(local)) return batQuote(local);

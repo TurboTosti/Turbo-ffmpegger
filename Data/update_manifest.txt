@@ -1,0 +1,11 @@
+Launcher.bat
+Data/README.txt
+Data/Turbo ffmpegger.hta
+Data/Turbo ffmpegger.ico
+Data/check_for_updates.ps1
+Data/drop_receiver.ps1
+Data/pick_files.ps1
+Data/pick_files.vbs
+Data/pick_folder.ps1
+Data/presets.json
+Data/refresh_shortcut.ps1
