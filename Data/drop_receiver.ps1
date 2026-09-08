@@ -344,6 +344,12 @@ public static class TurboDropNative
     private static extern bool SetWindowPos(IntPtr hWnd, IntPtr insertAfter,
         int x, int y, int width, int height, uint flags);
 
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetWindow(IntPtr hWnd, uint command);
+
+    [DllImport("user32.dll", EntryPoint = "GetWindowLongW")]
+    private static extern int GetWindowLong32(IntPtr hWnd, int index);
+
     [DllImport("user32.dll", EntryPoint = "SetWindowLongW", SetLastError = true)]
     private static extern int SetWindowLong32(IntPtr hWnd, int index, int value);
 
@@ -454,10 +460,19 @@ public static class TurboDropNative
                         Math.Max(1, rect.Bottom - rect.Top));
     }
 
-    public static void Place(IntPtr overlay, int x, int y, int width, int height)
+    public static void Place(IntPtr overlay, IntPtr owner, int x, int y, int width, int height)
     {
-        SetWindowPos(overlay, IntPtr.Zero, x, y, width, height,
-            SWP_NOZORDER | SWP_NOACTIVATE);
+        // WinForms can reset native ownership when showing the form. Restore
+        // it after Show and keep the receiver immediately above the HTA,
+        // without making it topmost over the application the drag came from.
+        SetOwner(overlay, owner);
+        IntPtr aboveOwner = GetWindow(owner, 3); // GW_HWNDPREV
+        if (aboveOwner != overlay && aboveOwner != IntPtr.Zero &&
+            (GetWindowLong32(aboveOwner, -20) & 0x00000008) != 0)
+            aboveOwner = IntPtr.Zero; // HWND_TOP: remain in the non-topmost band.
+        uint flags = SWP_NOACTIVATE;
+        if (aboveOwner == overlay) flags |= SWP_NOZORDER;
+        SetWindowPos(overlay, aboveOwner, x, y, width, height, flags);
     }
 }
 "@
@@ -501,8 +516,14 @@ public static class TurboDropNative
     $form.add_DragEnter({
         param($sender, $eventArgs)
         try {
-            [string[]]$paths = Get-DroppedPaths $eventArgs.Data
-            if ($paths.Count -gt 0) {
+            # Explorer may defer its file data until Drop. During DragEnter,
+            # check the advertised format without requesting the paths yet.
+            $canDrop = $eventArgs.Data.GetDataPresent([System.Windows.Forms.DataFormats]::FileDrop, $false)
+            if (-not $canDrop) {
+                [string[]]$paths = @(Get-DroppedPaths $eventArgs.Data)
+                $canDrop = $paths.Count -gt 0
+            }
+            if ($canDrop) {
                 $eventArgs.Effect = [System.Windows.Forms.DragDropEffects]::Copy
                 Write-BridgeState "hover"
             } else {
@@ -607,14 +628,15 @@ public static class TurboDropNative
                 $form.SetBrowseHole($width, $height, $holeX, $holeY, $holeWidth, $holeHeight)
                 $script:regionSignature = $regionSignature
             }
+            if (-not $form.Visible) { $form.Show() }
             [TurboDropNative]::Place(
                 $overlayHandle,
+                $hostHandle,
                 $origin.X + $left,
                 $origin.Y + $top,
                 $width,
                 $height
             )
-            if (-not $form.Visible) { $form.Show() }
         } catch {
             Write-BridgeError ("Drop receiver update failed: " + $_.Exception.Message)
         }

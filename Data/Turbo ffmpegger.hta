@@ -3010,11 +3010,17 @@ function dropBridgePublishGeometry(force) {
     var browse = document.getElementById("dz-browse");
     var dr = dz.getBoundingClientRect();
     var br = browse ? browse.getBoundingClientRect() : null;
-    var de = document.documentElement, body = document.body;
-    var vw = (de && de.clientWidth) || (body && body.clientWidth) || 1;
-    var vh = (de && de.clientHeight) || (body && body.clientHeight) || 1;
-    var clientLeft = (de && de.clientLeft) || (body && body.clientLeft) || 0;
-    var clientTop  = (de && de.clientTop)  || (body && body.clientTop)  || 0;
+    // The app root fills the client area. Measure it in the same coordinate
+    // system as the drop zone so IE zoom, fit transforms and quirks-mode
+    // viewport measurements cannot shift the native receiver off the target.
+    var root = document.getElementById("app-root");
+    if (!root) return;
+    var rr = root.getBoundingClientRect();
+    var vw = rr.right - rr.left;
+    var vh = rr.bottom - rr.top;
+    if (vw <= 0 || vh <= 0) return;
+    var clientLeft = rr.left;
+    var clientTop = rr.top;
     var left = Math.round(dr.left - clientLeft);
     var top = Math.round(dr.top - clientTop);
     var width = Math.max(1, Math.round(dr.right - dr.left));
