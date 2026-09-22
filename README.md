@@ -197,10 +197,3 @@ Built with Electron, JSNES and fflate, and designed to run user-supplied FFmpeg/
 
 The repository's **Source** folder contains the application source, Voidbreaker source, build instructions and verification reports. It does not include the external conversion programs or their source. See [Source/README.md](Source/README.md) for development setup.
 
-## Publishing this repository
-
-The preparation bundle extracts directly into this layout: `README.md`, `.gitignore`, `Source/`, `Docs/`, `Windows/` and `Linux/`. Copy those items into your existing repository folder, keeping its `.git` directory. Commit and push the source and documentation.
-
-The Windows and Linux folders contain complete release ZIPs. They are intentionally ignored by Git, because the updater downloads **GitHub Release attachments**, and the runtime packages exceed normal Git file limits. Upload those two ZIPs unchanged to a published pre-release in **TurboTosti/Turbo-ffmpegger**, tagged **v1.0-alpha**. Do not attach the outer preparation bundle as the update package. See [the publishing guide](Docs/Publishing.md) for the exact steps.
-
-Future updates need a higher version and rebuilt packages with matching manifests. Replacing files under the same tag does not trigger an update for users already running it. The original 0.8 updater has not been validated with these packages; use a manual installation for that transition.
