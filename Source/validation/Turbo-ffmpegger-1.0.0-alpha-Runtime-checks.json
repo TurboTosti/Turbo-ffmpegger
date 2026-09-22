@@ -1,0 +1,8 @@
+{
+  "success": true,
+  "checks": [
+    "Electron filesystem and module loader read all packaged application files",
+    "Packaged update worker stages a checksummed synthetic update in Electron"
+  ],
+  "method": "Electron Node mode only, existing runtime executable; no application window or physical audio."
+}

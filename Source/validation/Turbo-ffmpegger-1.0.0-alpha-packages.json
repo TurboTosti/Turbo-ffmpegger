@@ -1,0 +1,16 @@
+[
+  {
+    "platform": "win32",
+    "file": "Turbo-ffmpegger-1.0.0-alpha-Windows-x64.zip",
+    "bytes": 149273599,
+    "sha256": "32b98d3359feceeb71a55da0df015f69be14d0ac9be4f7dc76215076f992547d",
+    "files": 63
+  },
+  {
+    "platform": "linux",
+    "file": "Turbo-ffmpegger-1.0.0-alpha-Linux-x64.zip",
+    "bytes": 122619300,
+    "sha256": "7731a3c4133e2f7cdd64a87910bdbc186e4022a339349f05e78604310a41cb72",
+    "files": 63
+  }
+]

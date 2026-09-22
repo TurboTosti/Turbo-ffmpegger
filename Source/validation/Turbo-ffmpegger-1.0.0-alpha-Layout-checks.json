@@ -1,0 +1,9 @@
+{
+  "success": true,
+  "checks": [
+    "Turbo ffmpegger 1.0.0-alpha Windows x64: only launcher and update manifest at root; runtime/resources in App; all license texts intact in Licenses; original updater metadata retained; all five languages present; no build tools",
+    "Turbo ffmpegger 1.0.0-alpha Linux x64: only launcher and update manifest at root; runtime/resources in App; all license texts intact in Licenses; original updater metadata retained; all five languages present; no build tools",
+    "All ten original icon images embedded unchanged; non-icon Windows resources and executable code unchanged"
+  ],
+  "iconSha256": "652a4114cc2863aee51ea340b390f01175c29116614794c44af0f5381cb74d59"
+}

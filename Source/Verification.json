@@ -1,0 +1,446 @@
+{
+  "version": "1.0.0-alpha",
+  "method": "Background tests only; no physical desktop input or visible UI tests.",
+  "core": {
+    "success": true,
+    "checks": [
+      "First launch imports custom templates and retains exact backup",
+      "All 48 built-in templates remain alongside imported presets",
+      "Copying the folder preserves data without importing another PC profile",
+      "Import preserves conflicting custom definitions instead of replacing one",
+      "Game state persists across reopen and explicit reset clears resume",
+      "Arguments preserve quoted spaces, Unicode and literal path characters",
+      "Bundled FFprobe reads a file with spaces and Unicode",
+      "Conversion succeeds and a second conversion preserves the first output",
+      "Aborted conversion cleans its temporary output and allows another conversion",
+      "Image sequences preserve their start frame, count and flatten colour",
+      "Updates accept only newer stable versions with matching desktop platform",
+      "Update staging validates its manifest and never overwrites portable Data"
+    ],
+    "verifiedVersion": "1.0.0-alpha",
+    "note": "Rerun for user-supplied conversion tools; test tools are external fixtures, excluded from release packages."
+  },
+  "externalTools": {
+    "success": true,
+    "version": "1.0.0-alpha",
+    "checks": [
+      "Missing tools give the exact folder and setup guide without starting a process",
+      "A directory with an executable name is rejected as a missing program",
+      "Adding a matching external pair enables inspection and conversion without restarting Media",
+      "A manifest-validated update preserves the original tools and resolves them from the new app",
+      "Moving the portable folder resolves the corresponding tools without embedded absolute paths"
+    ],
+    "method": "Temporary local media and external test tools only; no conversion programs copied into release packages, no GUI or network."
+  },
+  "popups": {
+    "success": true,
+    "checks": [
+      "Three top buttons; language/update controls stay in Settings; template tools live only in their own dialog",
+      "New, duplicate and saved-template editing wait for the manager to close; its saved list remains usable",
+      "Rapid close/reopen cancels stale animations and never hides or disables a reopened popup",
+      "Reduced motion skips animation and editor handoff still works"
+    ],
+    "method": "Production popup and desktop controllers, real HTML navigation inventory, in-memory DOM and controlled animation promises. No native graphical layout or desktop input.",
+    "verifiedVersion": "1.0.0-alpha.2",
+    "note": "Retained: popup and menu code unchanged in the rebuilt public 1.0 alpha."
+  },
+  "simpleMode": {
+    "success": true,
+    "checks": [
+      "Dialog contains only close, file selection, progress/status and the requested action; all five languages present",
+      "Startup defaults to MP4 HQ keep size and copies the template when opening",
+      "Reopening captures the selected custom template and never changes unrelated pending jobs",
+      "Repeating conversion preserves the source and previous output with a numbered suffix",
+      "File drops use an explicit target; stale browse/drop replies and replies after closing are ignored",
+      "Invalid media cannot start conversion and another file can be selected",
+      "Closing during conversion leaves it in the queue; reopening shows progress; Stop allows another run",
+      "A native conversion error is readable in the overlay and does not disable file selection",
+      "Normal conversion and update activity prevent starting parallel work; Escape exits"
+    ],
+    "method": "Production Simple mode controller, probe and queue functions with in-memory DOM; real bundled FFmpeg/FFprobe and temporary videos. No visible UI, physical input or actual browser layout test.",
+    "verifiedVersion": "1.0.0-alpha",
+    "note": "Rerun with the changed media preflight and external test conversion programs; UI itself is unchanged."
+  },
+  "settingsPersistence": {
+    "success": true,
+    "checks": [
+      "Rapid slider changes coalesce; pending loads reflect the latest value; close flush bypasses debounce",
+      "Windows sharing violations retry asynchronously and never remove the old destination",
+      "Permanent lock preserves valid JSON and retains the newest unsaved value for retry",
+      "A changed value arriving during a write cannot be overwritten by an older save",
+      "Disk errors are not retried as sharing locks and cleanup cannot hide the original failure",
+      "Production app-close waits for preferences and stays open after a failed save"
+    ],
+    "method": "Production preferences and close function; real temporary files with injected Windows sharing errors. No access to OneDrive or user settings.",
+    "verifiedVersion": "1.0.0-alpha.1",
+    "note": "Retained; storage/preferences and app-close host code are unchanged."
+  },
+  "versioning": {
+    "success": true,
+    "version": "1.0.0-alpha",
+    "displayVersion": "1.0 alpha",
+    "releaseTag": "v1.0-alpha",
+    "checks": [
+      "Public label and short Git tag match the canonical package version",
+      "Alpha ordering follows 0.8, supports numbered previews and eventual stable",
+      "Invalid versions and unsafe path-like tags are rejected",
+      "GitHub prerelease 1.0 alpha is discovered from the previous 0.8 alpha",
+      "Alpha users receive newer previews; equal and old releases are ignored",
+      "Stable installations ignore previews regardless of GitHub flag",
+      "Drafts, foreign downloads, source ZIPs and wrong platforms stay excluded",
+      "Copied private 2.0.x pointers cannot reopen a development build",
+      "A short Git tag stages its canonical alpha manifest and keeps Data intact",
+      "Alpha packages still reject traversal, Data writes and version mismatch",
+      "Current public package matches exactly v1.0-alpha and does not bypass version ordering"
+    ],
+    "method": "Background synthetic files and release data only; no real profile, network, GUI or audio."
+  },
+  "queue": {
+    "success": true,
+    "method": "Production queue functions tested in Node.js without opening an app or using desktop input.",
+    "checks": [
+      "done video keeps its selection control",
+      "done video accepts a new template and converts from its original source",
+      "cancelled video keeps its selection control",
+      "cancelled video accepts a new template and converts from its original source",
+      "error video keeps its selection control",
+      "error video accepts a new template and converts from its original source",
+      "pending video keeps its selection control",
+      "pending video accepts a new template and converts from its original source",
+      "Running video cannot be selected or have its template changed",
+      "Only selected applies to finished and aborted videos without changing other rows",
+      "Apply to all requeues every available video and leaves the active conversion alone",
+      "A video that begins running while a template dialog is open remains unchanged",
+      "Completed selected videos are not implicitly rerun by Convert",
+      "Explicit rerun retains the assigned template and original source",
+      "Changing a template during another conversion waits for the queue",
+      "Requeue preserves image-sequence source information"
+    ],
+    "verifiedVersion": "1.0.0-alpha.2",
+    "note": "Retained: queue code unchanged."
+  },
+  "publicRelease": {
+    "tag": "v1.0-alpha",
+    "packageVersion": "1.0.0-alpha",
+    "conversionProgramsIncluded": false,
+    "electronMediaLibrariesIncluded": true,
+    "note": "User-requested public label and external conversion tools. UI/game unchanged; host and media preflight now use original-root tools across updates. Local alpha.1/alpha.2 copies require a manual installation."
+  },
+  "game": {
+    "success": true,
+    "mapper": 4,
+    "framesTested": 661,
+    "exactResumeFrames": 120,
+    "stateBytes": 1203972,
+    "elapsedMs": 623.5416,
+    "romSha256": "4ea2830357b5e8024b6c14ed3b1f8f68030c704d040e097281e412c1ac4c92e9"
+  },
+  "gameLifecycle": {
+    "success": true,
+    "checks": [
+      "Play, Stop & close and pause save through production controller; no frame updates after pause",
+      "App-close acknowledgement occurs after game persistence",
+      "Fresh game controller loads the state saved by a previous controller",
+      "Closing during asynchronous initialization prevents background play",
+      "Repeated Play during resume shares one audio stream and continues producing frames",
+      "Reset writes a fresh game state and remains pausable"
+    ],
+    "method": "Production controller and worker; in-memory DOM and audio adapters, real portable storage. No actual graphical/audio-device verification."
+  },
+  "gameRecovery": {
+    "success": true,
+    "checks": [
+      "Losing focus during initialization prevents background play",
+      "Hiding during audio startup cancels play",
+      "Closing and reopening while audio starts resumes a live game",
+      "Unreadable save never silently starts and overwrites progress",
+      "Reset recovers from a stopped game worker"
+    ],
+    "failures": [],
+    "method": "Production game controller and emulator with synthetic startup delays, background visibility events, unreadable save and terminated worker. No native input, sound or windows."
+  },
+  "audio": {
+    "success": true,
+    "checks": [
+      "120 seconds at 44100 Hz with 3–15 ms delivery jitter: no underruns, overflows or timing drift",
+      "Starvation fades out; stop/restart rejects old sound at 44100 Hz",
+      "120 seconds at 48000 Hz with 3–15 ms delivery jitter: no underruns, overflows or timing drift",
+      "Starvation fades out; stop/restart rejects old sound at 48000 Hz",
+      "120 seconds at 96000 Hz with 3–15 ms delivery jitter: no underruns, overflows or timing drift",
+      "Starvation fades out; stop/restart rejects old sound at 96000 Hz",
+      "Real ROM + worker + worklet at 48000 Hz: 485 frames in 8 seconds; pause stops emulation; saved-device timing restored",
+      "Real ROM + worker + worklet at 44100 Hz: 485 frames in 8 seconds; pause stops emulation; saved-device timing restored"
+    ],
+    "method": "Production audio worklet with a virtual device clock; real supplied ROM and production worker. No speakers or native audio device used."
+  },
+  "retainedGameChecks": {
+    "verifiedVersion": "2.0.2",
+    "note": "ROM/emulator/audio/CRT are unchanged. Historical deterministic ROM/audio checks retained; controller lifecycle and recovery checks rerun for 1.0 alpha 1 after the options-save error handling change."
+  },
+  "aurora": {
+    "sourceSha256": "2fd1e16a67db7fb92068f15ff0e5d9b608ce2050a946bb2a2c2c9d02fe7cf77e",
+    "method": "Production Canvas renderer evaluated offline using @napi-rs/canvas; no app windows, desktop input or audio.",
+    "renderedPreviews": [
+      "aurora-dark.png",
+      "aurora-light.png",
+      "aurora-wide.png",
+      "aurora-comparison.png"
+    ],
+    "canvasSizes": [
+      [
+        980,
+        700
+      ],
+      [
+        1600,
+        900
+      ]
+    ],
+    "textureReuse": true,
+    "themeRefresh": true,
+    "disableResume": true,
+    "sample": {
+      "frames": 120,
+      "meanMs": 4.602266666666664,
+      "p95Ms": 5.420900000000074
+    },
+    "limitations": "Native software Canvas timing is not Chromium/GPU performance or a conversion benchmark. Actual app appearance remains for the user to test.",
+    "verifiedVersion": "2.0.4",
+    "note": "Historical report: its timing did not force Canvas readback and may omit deferred raster work. Use the current background report for forced-readback software timing. Current checks also verify identical Aurora pixels."
+  },
+  "backgrounds": {
+    "success": true,
+    "version": "2.0.5",
+    "sourceSha256": "05f988e364394ae0d92e083ccd6d3ae8a68a4093beb6843a0b756cf94bdf17cd",
+    "method": "Production Canvas renderer evaluated offline using @napi-rs/canvas. No app windows, desktop input, real audio or network.",
+    "approvedAuroraUnchanged": true,
+    "canvasSizes": [
+      [
+        980,
+        700
+      ],
+      [
+        1600,
+        900
+      ]
+    ],
+    "checks": [
+      {
+        "pattern": "ambient",
+        "textureReuse": true,
+        "animation": true,
+        "disableResume": true,
+        "themeChange": true,
+        "resize": true,
+        "patternSwitch": true,
+        "softwareCanvasTiming": {
+          "frames": 45,
+          "readbackForced": true,
+          "meanMs": 6.660115555555543,
+          "medianMs": 6.352499999999964,
+          "p95Ms": 8.56919999999991
+        },
+        "previousSoftwareCanvasTiming": {
+          "frames": 45,
+          "readbackForced": true,
+          "meanMs": 0.9823711111111253,
+          "medianMs": 0.8904999999999745,
+          "p95Ms": 1.5236999999997352
+        }
+      },
+      {
+        "pattern": "constellation",
+        "textureReuse": true,
+        "animation": true,
+        "disableResume": true,
+        "themeChange": true,
+        "resize": true,
+        "patternSwitch": true,
+        "softwareCanvasTiming": {
+          "frames": 45,
+          "readbackForced": true,
+          "meanMs": 6.9350066666666965,
+          "medianMs": 6.454999999999927,
+          "p95Ms": 9.391499999999724
+        },
+        "previousSoftwareCanvasTiming": {
+          "frames": 45,
+          "readbackForced": true,
+          "meanMs": 3.276777777777776,
+          "medianMs": 3.57970000000023,
+          "p95Ms": 4.229400000000169
+        }
+      },
+      {
+        "pattern": "waves",
+        "textureReuse": true,
+        "animation": true,
+        "disableResume": true,
+        "themeChange": true,
+        "resize": true,
+        "patternSwitch": true,
+        "softwareCanvasTiming": {
+          "frames": 45,
+          "readbackForced": true,
+          "meanMs": 4.621351111111087,
+          "medianMs": 4.535499999999956,
+          "p95Ms": 4.9333000000005995
+        },
+        "previousSoftwareCanvasTiming": {
+          "frames": 45,
+          "readbackForced": true,
+          "meanMs": 0.6849799999999959,
+          "medianMs": 0.6957000000002154,
+          "p95Ms": 0.8269999999993161
+        }
+      },
+      {
+        "pattern": "magic",
+        "textureReuse": true,
+        "animation": true,
+        "disableResume": true,
+        "themeChange": true,
+        "resize": true,
+        "patternSwitch": true,
+        "softwareCanvasTiming": {
+          "frames": 45,
+          "readbackForced": true,
+          "meanMs": 5.121824444445035,
+          "medianMs": 5.0843000000022585,
+          "p95Ms": 5.6820000000006985
+        },
+        "previousSoftwareCanvasTiming": {
+          "frames": 45,
+          "readbackForced": true,
+          "meanMs": 3.7413155555553708,
+          "medianMs": 3.668499999999767,
+          "p95Ms": 4.29399999999805
+        }
+      },
+      {
+        "pattern": "starfield",
+        "textureReuse": true,
+        "animation": true,
+        "disableResume": true,
+        "themeChange": true,
+        "resize": true,
+        "patternSwitch": true,
+        "softwareCanvasTiming": {
+          "frames": 45,
+          "readbackForced": true,
+          "meanMs": 3.496588888888962,
+          "medianMs": 3.307199999999284,
+          "p95Ms": 5.121399999999994
+        },
+        "previousSoftwareCanvasTiming": {
+          "frames": 45,
+          "readbackForced": true,
+          "meanMs": 0.5772555555554088,
+          "medianMs": 0.5262000000002445,
+          "p95Ms": 0.94629999999961
+        }
+      },
+      {
+        "pattern": "aurora",
+        "textureReuse": true,
+        "animation": true,
+        "disableResume": true,
+        "themeChange": true,
+        "resize": true,
+        "patternSwitch": true,
+        "softwareCanvasTiming": {
+          "frames": 45,
+          "readbackForced": true,
+          "meanMs": 34.69926666666644,
+          "medianMs": 34.52300000000105,
+          "p95Ms": 37.02060000000347
+        }
+      }
+    ],
+    "limitations": "Software Canvas timings are not Chromium/GPU measurements or conversion performance. User desktop and Linux rendering remain untested.",
+    "verifiedVersion": "2.0.5",
+    "note": "Historical full-HTML hash. The complete background renderer remains byte-identical in this public 1.0 alpha build; current UI source checks cover that comparison."
+  },
+  "uiSyntaxAndScope": {
+    "success": true,
+    "version": "1.0.0-alpha",
+    "inlineScriptsParsed": 1,
+    "applicationScriptsParsed": 20,
+    "backgroundsByteIdenticalTo": "1.0.0-alpha.2",
+    "backgroundRendererSha256": "7bfb9508431807a09078a11b25851a0307547179d6e307e2b040d249d1ce9e0c",
+    "gameAudioVideoRomAndPresetsUnchanged": true,
+    "uiStorageUpdatesAndGameControllerUnchanged": true,
+    "allowedRuntimeChanges": [
+      "package.json",
+      "main.cjs",
+      "core/layout.cjs",
+      "core/media.cjs"
+    ],
+    "method": "Source syntax and linked assets; all runtime files except the declared version/host/media-tool changes match alpha.2. Not a graphical layout test."
+  },
+  "performance": {
+    "success": true,
+    "method": "Three alternating paired FFmpeg CPU conversion runs on a generated 48-second 1080p clip; production NES worker and AudioWorklet driven by an in-memory audio device, 30 Hz video presentation and save messages. Excludes Chromium compositing, physical audio and CRT display. Hardware-specific measurement, not a universal guarantee.",
+    "rows": [
+      {
+        "round": 0,
+        "mode": "paused",
+        "ms": 5434.5091,
+        "displayFrames": 0
+      },
+      {
+        "round": 0,
+        "mode": "playing",
+        "ms": 4691.5527999999995,
+        "displayFrames": 141
+      },
+      {
+        "round": 1,
+        "mode": "playing",
+        "ms": 4794.723000000002,
+        "displayFrames": 144
+      },
+      {
+        "round": 1,
+        "mode": "paused",
+        "ms": 4667.398000000001,
+        "displayFrames": 0
+      },
+      {
+        "round": 2,
+        "mode": "paused",
+        "ms": 4976.976200000001,
+        "displayFrames": 0
+      },
+      {
+        "round": 2,
+        "mode": "playing",
+        "ms": 4665.116999999998,
+        "displayFrames": 141
+      }
+    ],
+    "pausedMs": 5026.2944333333335,
+    "playingMs": 4717.130933333333,
+    "slowdownPercent": -6.150922993083984,
+    "frames": 445,
+    "audioChunks": 879,
+    "saves": 10,
+    "measuredVersion": "2.0.1",
+    "note": "Retained measurement: game worker, audio worklet and CRT renderer remain unchanged. This does not cover the 2.0.4/2.0.5 backgrounds or native Chromium/GPU rendering."
+  },
+  "desktopUI": {
+    "status": "Centered popup styling and real animation appearance require user testing. Background tests cover popup/editor handoff, navigation, interrupted animation, reduced motion and Simple mode conversion with in-memory DOM.",
+    "userFeedback": "User confirmed game audio/CRT were good and liked the Aurora improvement; requested matching popup style and simpler menus after alpha 1.",
+    "reason": "The prior hidden Electron renderer test failed with exitCode 49 even for a minimal data page; GPU subprocess failed with 0xC0000135. Sandbox remained enabled. That blocked test was not repeated. No visible window, physical input or audio device was used."
+  },
+  "linux": {
+    "status": "packaged only; not run on Linux"
+  },
+  "rustPopup": {
+    "status": "not reproduced; no Rust compiler or invocation in the application",
+    "note": "User considers another agent a likely source. Game and media lifecycle diagnostics added to Data/Logs/application.log."
+  },
+  "realLegacyProfile": {
+    "status": "not accessed by development tools; imported by the app when the user first launches it"
+  }
+}

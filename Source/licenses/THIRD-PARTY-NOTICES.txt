@@ -1,0 +1,45 @@
+Turbo ffmpegger portable 1.0 alpha
+
+Electron 44.4.3 (Chromium and Node.js runtime)
+https://github.com/electron/electron/releases/tag/v44.4.3
+Electron: MIT license. The runtime's notices are retained unchanged as
+Licenses/Electron-LICENSE.txt and Licenses/Chromium-LICENSES.html.
+The Windows runtime executable's icon resources
+are replaced with the owner's original application icon; its code is unchanged.
+Only locale packs for the supported interface languages are included.
+
+Native portable launchers
+The Windows launcher uses only built-in Windows API DLLs. The Linux launcher
+statically links musl; its full notice is in musl-LICENSE.txt. Zig 0.15.2 was
+used as a build tool; its notice is in Zig-LICENSE.txt, and Windows SDK/import
+definitions from mingw-w64 are covered by mingw-NOTICE.txt. The compiler and
+its build cache are not included in the application packages.
+
+JSNES 2.1.0 — NES emulator by JSNES contributors
+https://github.com/bfirsh/jsnes
+https://www.npmjs.com/package/jsnes/v/2.1.0
+Apache License 2.0; see JSNES-LICENSE.txt. The distributed minified emulator
+is unchanged. Turbo ffmpegger's worker, audio and save integration are new.
+
+fflate 0.8.3 — Arjun Barrett
+https://github.com/101arrowz/fflate
+MIT license; see fflate-LICENSE.txt. Used for portable update ZIP files.
+
+Voidbreaker R49
+The unmodified ROM was supplied by the application's owner together with
+its source. ROM SHA-256:
+4ea2830357b5e8024b6c14ed3b1f8f68030c704d040e097281e412c1ac4c92e9
+No additional game, proprietary console firmware or BIOS is included.
+This document does not relicense the game or claim rights to its assets.
+
+FFmpeg and FFprobe — user-supplied conversion programs, not distributed here
+https://ffmpeg.org/download.html
+Neither platform package includes these command-line programs. The user
+supplies a matching pair in App/resources/tools. See Help/FFmpeg-setup.md.
+Their license terms depend on the build the user obtains. The application
+source archive is not corresponding source for those external programs.
+
+Electron's ffmpeg.dll (Windows) / libffmpeg.so (Linux) is a separate runtime
+library and remains included. Its applicable notices, along with other
+Chromium components, are retained in Chromium-LICENSES.html. These runtime
+libraries must not be replaced by conversion tools from another build.

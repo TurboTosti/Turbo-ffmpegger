@@ -1,0 +1,127 @@
+Turbo ffmpegger 1.0 alpha — portable Windows / Linux edition
+
+GitHub release title: Turbo ffmpegger 1.0 alpha
+GitHub tag: v1.0-alpha (prerelease)
+Package version: 1.0.0-alpha
+
+This public release contains the complete converter, Simple mode, updated
+popups and menus, portable settings, Voidbreaker and improved backgrounds.
+
+GET STARTED
+Extract the entire matching platform ZIP into a folder you can write to.
+FFmpeg and FFprobe are NOT included. Add your own matching pair to
+App/resources/tools before inspecting or converting media:
+Windows: ffmpeg.exe and ffprobe.exe; Linux: ffmpeg and ffprobe.
+See Help/FFmpeg-setup.md for download links and exact setup instructions.
+The interface and Voidbreaker can open without the conversion programs.
+Windows: open Turbo ffmpegger.exe in the top-level folder.
+Linux: open turbo-ffmpegger, or run ./turbo-ffmpegger from that folder.
+If executable permissions were lost during extraction, run sh Help/Start.sh.
+Linux executables normally have no extension. This is a portable x64 package,
+not a Debian, RPM or Arch installer. Normal Linux desktop libraries and
+Chromium sandbox support are still required. Native Linux use is not yet tested.
+
+The small top-level launcher starts the actual application inside App.
+Keep both executables and every supporting folder together. No separate
+FFmpeg, Node.js, .NET or WebView2 installation is needed. Run as a normal user.
+
+CONVERT
+Drop media or use Browse files, choose a template and press Convert.
+Normal conversion uses an output subfolder beside the input unless you choose
+another output folder. Existing outputs are protected with numbered filenames.
+Finished, stopped and failed rows remain selectable for another conversion.
+
+SIMPLE MODE
+Select a template, then open Simple mode. The usual startup default is MP4 HQ
+(keep size). Drop one video or click to choose it, then press do the thing.
+The result goes beside the original as name_converted.ext; the selected
+template determines the extension. Further results get _1, _2 and so on.
+Close with X or Escape to return to the full queue. Conversion continues there.
+After completion or cancellation, selection and repeat conversion stay available.
+
+MENUS
+The top buttons are Manage templates, Simple mode and Settings.
+Manage templates opens its own popup for creating, editing/duplicating,
+deleting or reloading templates. The permanent sidebar has search and filters.
+Settings contains Appearance, Language and Updates. The interface supports
+English, Dutch, Japanese, Chinese and Korean. Fancy graphics can be disabled.
+Simple mode and template management are centered popups with brief animations;
+system reduced-motion preferences disable those animations.
+
+PORTABLE DATA AND MANUAL UPGRADES
+Close the old app. Extract the new release into a NEW folder, then copy your
+existing Data folder into it, replacing the new release's starter Data files.
+Also copy App/resources/tools into that location in the new app. When changing
+operating systems, supply tools for the destination operating system instead.
+Keep the old folder as a backup. Do not extract over old application files.
+Do not replace your saved Data with starter files from a fresh ZIP.
+
+Data/custom_presets.json: custom templates
+Data/presets.json: built-in template library and saved edits
+Data/settings.json: favourites, appearance and language
+Data/game-options.json: volume and CRT preferences
+Data/Game/voidbreaker-state.json: game progress
+Data/Backups and Data/Logs: backups and diagnostic logs
+
+For another computer on the same platform, copy the whole application folder,
+including Data and Versions if present. Between Windows and Linux, use the
+matching platform build and transfer Data with both apps closed. Media files
+are separate; custom paths, fonts and hardware encoders may need adjustment.
+Settings also provides Import previous settings folder for older JSON files.
+
+Settings and game options save in the background. Rapid changes are combined;
+temporary file locks are retried. A persistent failure keeps the previous saved
+file and shows a notice. Closing waits for pending settings; a failed save
+keeps the app open so you can retry. The portable folder must remain writable.
+
+VOIDBREAKER
+Play while waiting opens the bundled game with the JSNES emulator. No ROM
+selection or emulator configuration is needed. Pause or Stop & close saves
+progress; Play resumes it, including after closing and reopening the app.
+Losing focus pauses the game. Reset starts over after confirmation.
+
+Move: arrows, or A/D for left/right
+NES A: Z or Space; NES B: X
+Start: Enter; Select: Shift
+Pause/resume: P; close: Escape
+
+Volume and CRT strength are adjustable. If graphics acceleration is unavailable,
+the game uses a plain picture. No game simulation runs while paused. During
+conversion, the game reduces screen updates; playing still uses some resources.
+
+UPDATES
+Settings > Updates > Check for updates reads published GitHub releases from:
+https://github.com/TurboTosti/Turbo-ffmpegger/releases
+
+An update must have a strictly higher version and a matching Windows/Linux x64
+ZIP with a valid desktop manifest. The application checks versions and file
+hashes. Checks and installation happen only when requested. Updates are staged
+under Versions; Restart with update activates one while retaining your Data.
+User-supplied tools stay in App/resources/tools under the ORIGINAL application
+folder. Updated apps continue using them, so they do not need copying again.
+Finish or stop conversion first. Game progress and pending settings are saved.
+Older, equal and draft releases are ignored. This alpha accepts newer previews
+and stable releases; stable builds ignore previews.
+
+Local alpha.1/alpha.2 test builds will not offer this lower public label as an
+update. Open this rebuilt package directly and use the manual Data transfer
+above. Automatic upgrades from the original 0.8 application are not verified.
+
+PACKAGE FOLDERS
+App: required runtime, application and a folder for user-supplied media tools
+Data: templates, settings, game saves, backups and caches
+Licenses: bundled third-party notices
+Help: this guide, verification report and package inventory
+resources: small version record required by older desktop updaters
+The top-level desktop-release.json is needed for update validation.
+
+VERIFICATION
+Background checks cover conversion, portable data, settings-save recovery,
+queue reuse, popup navigation, game persistence and package/update validation.
+Help/Verification.json identifies current checks and retained earlier results.
+Actual popup appearance, physical drops and native Linux execution still need
+broader user testing. The running game pipeline and graphics are unchanged.
+
+The build is unsigned, so Windows may show a SmartScreen/publisher warning.
+Third-party notices are in Licenses. The supplied Voidbreaker game retains its
+own rights; no other commercial ROM or console BIOS is bundled.

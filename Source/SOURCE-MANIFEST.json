@@ -1,0 +1,713 @@
+{
+  "version": "1.0.0-alpha",
+  "files": [
+    {
+      "path": "app/core/layout.cjs",
+      "sha256": "6a4ef8c331a0ded885fbcb631a943ea0c80bb791e4de081e564363ed3383a639"
+    },
+    {
+      "path": "app/core/media.cjs",
+      "sha256": "c368a91799ddf3061543a7ece776619268e1e257d555f2d29ab9e0cf357dcbb2"
+    },
+    {
+      "path": "app/core/native.cjs",
+      "sha256": "03b7f01da74e55edee9fa648131cba373d928b1143e2f85c1c1c2d1a4d8abce4"
+    },
+    {
+      "path": "app/core/preferences.cjs",
+      "sha256": "f14718426166c33f632d1a0570829c029806a988ae14c5d7c2e1187d10b5e706"
+    },
+    {
+      "path": "app/core/storage.cjs",
+      "sha256": "6b49f84031b10a3e8bc7d0c0151be0c34e031d67cc78809cc06b835012add7c4"
+    },
+    {
+      "path": "app/core/updates.cjs",
+      "sha256": "05a0ccf0dca6f3fd3a39db22ae20292258f9877702994c77c210c94bc9c65261"
+    },
+    {
+      "path": "app/core/version.cjs",
+      "sha256": "bc18e5da062190fd21f38a53a892e3f2a5e12e97a9511f58de2f1886ad31fc65"
+    },
+    {
+      "path": "app/icon.ico",
+      "sha256": "652a4114cc2863aee51ea340b390f01175c29116614794c44af0f5381cb74d59"
+    },
+    {
+      "path": "app/icon.png",
+      "sha256": "d0325f45ee3fafd0b3edcf1f3ff9a5ff367778b04c57990d4ae4bd7d0c105892"
+    },
+    {
+      "path": "app/main.cjs",
+      "sha256": "c2a19b865b101cc4da05ffb150874d1c8ac4585d8fc615c34d67e10e14e1bbc8"
+    },
+    {
+      "path": "app/package.json",
+      "sha256": "efc02381429880bb49570daae28d3dbad3b3c7630110ccf2daba5dc5335b7bc4"
+    },
+    {
+      "path": "app/preload.cjs",
+      "sha256": "9ed0c25b10fcbb36c3986a17dfc1eafd9edd4851f3c880d001bb7ed3e4322732"
+    },
+    {
+      "path": "app/ui/bridge.js",
+      "sha256": "2d909e9a4f8d420fa10deb8f6112d3f458970ac72576e346d2059c653e85817b"
+    },
+    {
+      "path": "app/ui/default-presets.json",
+      "sha256": "9404e0271941b406885c87b164f719ba53a80bd90fc7079d99cd2ff8cdb90ee1"
+    },
+    {
+      "path": "app/ui/desktop.css",
+      "sha256": "555c11d993eaaa339f990415a1f76cf663682006f11ccf41e1fc08de50b3a8cd"
+    },
+    {
+      "path": "app/ui/desktop.js",
+      "sha256": "5e758a6c0335639f661a42942995ff7d35d38331be1ba7f63e776d77277c35ba"
+    },
+    {
+      "path": "app/ui/game-audio.js",
+      "sha256": "92c873fbeaa338d30f5c42534fd36ecae1aedf7d58206a61cd99fb1a3d97324d"
+    },
+    {
+      "path": "app/ui/game-video.js",
+      "sha256": "a5dcce293574dc6a61705a075231498cca43a2d4a4a0d46a141ebe593d6ce2d5"
+    },
+    {
+      "path": "app/ui/game-worker.js",
+      "sha256": "22e1f6c08270c3da742e28897d7f908452eca6976b473d22873a86d4a611faf0"
+    },
+    {
+      "path": "app/ui/game.css",
+      "sha256": "4ff85e706b288adb91eac883a15881d3c4a7ed4669ab4b70ca9f02403b9f6d4e"
+    },
+    {
+      "path": "app/ui/game.js",
+      "sha256": "36a58b72ed6b470defea0a33fc1bf5db5bcb67e5d6ec166ca9f5d24a1bf62efc"
+    },
+    {
+      "path": "app/ui/game.nes",
+      "sha256": "4ea2830357b5e8024b6c14ed3b1f8f68030c704d040e097281e412c1ac4c92e9"
+    },
+    {
+      "path": "app/ui/index.html",
+      "sha256": "24699bebbd0e4053ae4d1c187979e40ff576a2444311403d526c656db59add73"
+    },
+    {
+      "path": "app/ui/jsnes.js",
+      "sha256": "84946f0dae4bcf3b2dfebe84ad3bfeb1dbcb413bd9b1a69e1f45910a95fd7b41"
+    },
+    {
+      "path": "app/ui/native.js",
+      "sha256": "c9db7c6d7b5a422e3e477a892631e1259a95706ea39fdbe408fbaad1a51aae25"
+    },
+    {
+      "path": "app/ui/popup.js",
+      "sha256": "ea528b82fa3cb91d1764c1dee355fd9cc9618b732b0f45ab9fe313e2b1b47a48"
+    },
+    {
+      "path": "app/ui/simple.js",
+      "sha256": "d1220ee42cdcadc97359a543c08f74c7a4e4120d887daf2bea9d9b5cb7b4a8f4"
+    },
+    {
+      "path": "app/vendor/fflate-LICENSE.txt",
+      "sha256": "0a1df3a083d0c010560aa342e87959c8c1070e6fd54545741f083f22d0c8b551"
+    },
+    {
+      "path": "app/vendor/fflate.cjs",
+      "sha256": "462ef8041fc970e3615a20a9dd2b2e3047a073b2da729ef4f02b634bba8b7b83"
+    },
+    {
+      "path": "app/vendor/JSNES-LICENSE.txt",
+      "sha256": "530136cec696ac1fcdeb792a77472cb273f9f814ad0ed795dccdc95db7423e0a"
+    },
+    {
+      "path": "docs/ADD-FFMPEG-HERE.txt",
+      "sha256": "fc177d00885635042e809def5c3851c4627d3a2cc6e390406b5322dc6191f3ea"
+    },
+    {
+      "path": "docs/Building.md",
+      "sha256": "91411f2579e7256f2a5129b02010b0a1e5e845e96ad8eb80acf0b0809c35d59c"
+    },
+    {
+      "path": "docs/FFmpeg-setup.md",
+      "sha256": "c7cb4300c73f13919257265d2455226c613b51dfe55532b922291f58c2f306f0"
+    },
+    {
+      "path": "docs/Publishing.md",
+      "sha256": "6076f4cd9d3b59a8492f4aea37457240a3c02ff9961718019ad0fc009c940cac"
+    },
+    {
+      "path": "game-source/.gitignore",
+      "sha256": "020c2606e8ed484089c2083e0be438b9d0736bee1558a6b76af0d58bd23f69cf"
+    },
+    {
+      "path": "game-source/assets/glass-patterns.inc",
+      "sha256": "d6d3e8432b4c24cf51c5e0e6da4dbe9430edd8db1ab8424dadda736ec410a942"
+    },
+    {
+      "path": "game-source/assets/glass-stage-order.inc",
+      "sha256": "aa4b804186fae1c67195c2b87d494ceea550b75608b38953803befe17293ad8d"
+    },
+    {
+      "path": "game-source/assets/layout.json",
+      "sha256": "5b8726e7d6bcded5be27d773d5895e2020f7d479f0bb5e7f9a4f11dfbe4d4dbc"
+    },
+    {
+      "path": "game-source/assets/music/game-scores.js",
+      "sha256": "6f0266826200891c847fab352cce300245f51ff17409fef8f2b2a74e5c18f43a"
+    },
+    {
+      "path": "game-source/assets/music/title-score.js",
+      "sha256": "d9a235cfb71063686fd806376973d48009e0d69bb5687dfdb608bad6f2fd749c"
+    },
+    {
+      "path": "game-source/assets/reference/polybound-screen.png",
+      "sha256": "2887abf38ffe3dd54f683b7c9877783bf17a1f333c58e322b8af65e1c50dc53d"
+    },
+    {
+      "path": "game-source/assets/reference/title-reference.png",
+      "sha256": "a164038b9701e33da04093df8f3e86d5efb13aedb7d827f8d7150d4679b3acbb"
+    },
+    {
+      "path": "game-source/assets/region-palettes.json",
+      "sha256": "19ce7a1692957c70965b11fa7d1074990c39e78190bc0aa27ea901da800f9483"
+    },
+    {
+      "path": "game-source/build.ps1",
+      "sha256": "c8378a1080a40614f5ee3ea37e71ef70234cad461b934d9ab81bdede6d8072ed"
+    },
+    {
+      "path": "game-source/docs/design.html",
+      "sha256": "5cee7fd969cd3c1eaa5aa15778de2d489c4898ab99e4e8a8e48c3f0e3147afa3"
+    },
+    {
+      "path": "game-source/docs/design.md",
+      "sha256": "813afc0a875e7dd56432dd6ef81b65f8ce387500d5325a79c9f7c2a0dee479d9"
+    },
+    {
+      "path": "game-source/docs/levels.csv",
+      "sha256": "6c61c312898fac34448e4c90948fdcfbf535b4a41a68b409b987739909504e0c"
+    },
+    {
+      "path": "game-source/docs/rules.json",
+      "sha256": "12b094771d9862fcb0f2f0a5fba1d73e047a71a1b25a26e322215f199f9c313e"
+    },
+    {
+      "path": "game-source/package.ps1",
+      "sha256": "603bf508e59313758d57591304ba51e6f585f1dc1c46a069ebba2f20a35e5e1c"
+    },
+    {
+      "path": "game-source/project.json",
+      "sha256": "b373e74c6eb4fdf6f0322ec29a1fc71cc86534711a32e09785b54333c108d880"
+    },
+    {
+      "path": "game-source/README.md",
+      "sha256": "1c21696fb4b9e6485e6afdab3d09704a2da7507614c489f65c1772628bd8cf54"
+    },
+    {
+      "path": "game-source/source-manifest.json",
+      "sha256": "da6588da54a925ae9b8d39909252d2239ee360eb6ead2d828ea0d1576a895907"
+    },
+    {
+      "path": "game-source/src/campaign.s",
+      "sha256": "01eb7cfa822f65e8380f472260f0a4afb6e51a268e857274306757a707c0493b"
+    },
+    {
+      "path": "game-source/src/coop.c",
+      "sha256": "a293beead0454ddf83b68424101cb65ecc95199a3fe62c90b2b9a3b738a32426"
+    },
+    {
+      "path": "game-source/src/fast-balls.s",
+      "sha256": "9a13720e645aa5939e3e1a4ea5ab7920efaccbd2ea99b23c0caaa6f688acaa01"
+    },
+    {
+      "path": "game-source/src/fast-boss.s",
+      "sha256": "0d642961d57f6618ac3d7b3f08aa78be4f9177c65e51ebe00e5e8b602774a034"
+    },
+    {
+      "path": "game-source/src/fast-collision.s",
+      "sha256": "4f9ea58fc0a7d920336efdf51608d01b97659f6d215797d88ea3a4f770217537"
+    },
+    {
+      "path": "game-source/src/fast-draw.s",
+      "sha256": "bb73281f3456caa56f5ea11f31461b6adf5dbf0fcf63d1306a9d65e3c5cd627c"
+    },
+    {
+      "path": "game-source/src/fast-pickups.s",
+      "sha256": "dee8fc3bb4a3c368d3960ba69d361ae70d72d3568f2e1606402bd9e09e15fde4"
+    },
+    {
+      "path": "game-source/src/fast-render.s",
+      "sha256": "f458b2ea1491a40a8645d0616c9dac58a887f66d7b438264e4a2cfaebe908975"
+    },
+    {
+      "path": "game-source/src/flight.s",
+      "sha256": "55b3930d7fb683f9895ee653fd016e39e5ed00bf3b6d033d0f7f8ca3cc35b44b"
+    },
+    {
+      "path": "game-source/src/game.c",
+      "sha256": "ecf5438f5feb6eec2c55c7329ea4023977b4a675cfa89b2c68f19684159c1363"
+    },
+    {
+      "path": "game-source/src/glass.s",
+      "sha256": "2680bebbd93a6720e299e49bcfc82cadbd7ecebdfcbc86d2a6919c8c30c8bcf0"
+    },
+    {
+      "path": "game-source/src/mapper.s",
+      "sha256": "297c5935065569560d96a8b23c253f88fd2bf87fc6ab42d58ef19a291f576ee5"
+    },
+    {
+      "path": "game-source/src/menu-update.s",
+      "sha256": "f117a1e82177730a903c24e1ef83437614ce048aaaad007e6b1522113224b127"
+    },
+    {
+      "path": "game-source/src/music-effects.inc",
+      "sha256": "8c3e9a8a448858fed44f66ed46c81709d42f9f8d08b8ffd260cf4f50120aeebf"
+    },
+    {
+      "path": "game-source/src/music-mmc3.s",
+      "sha256": "6eb7b3c49932b7b4bd93d9a27e05b896d26245f7bd9fbcbad64fbf4fc3c267b1"
+    },
+    {
+      "path": "game-source/src/nes.cfg",
+      "sha256": "28ee67c4a9978fe6419cc3195e0eb05619c47c1b3f59ac110ddb608f84c2e064"
+    },
+    {
+      "path": "game-source/src/nsf-ntsc-region.s",
+      "sha256": "b12b07e03ce542a4cd5cd382957721590de4b2e109914f0ca346ae94b71a1eb8"
+    },
+    {
+      "path": "game-source/src/presentation-fx.s",
+      "sha256": "8d17278ba68fbefe172311fa0d6e2384dff168a046581b373fe87b19be382f98"
+    },
+    {
+      "path": "game-source/src/region.h",
+      "sha256": "45eae2e3010a1f175e34b18fee9597c0a47ed6ab238a30dcaa05395ca2e3cc89"
+    },
+    {
+      "path": "game-source/src/region.s",
+      "sha256": "2287aa6314a8589bdb1dba97371cea41f2aaa199ffbeeedf4def5baa651bdcc7"
+    },
+    {
+      "path": "game-source/src/start.s",
+      "sha256": "85202f3c055603f34babc9bfab99ab6193d77710644aa2508786bea90e0efd15"
+    },
+    {
+      "path": "game-source/src/title-nsf.cfg",
+      "sha256": "20ab169f1305145769557639e2daccf5d411f8b0629de6cbefd9e0a9a68187f8"
+    },
+    {
+      "path": "game-source/src/trail.s",
+      "sha256": "4ab3e540c99b5257cc057c6bcea560e9ec4fbfb50345d05877bfc271b863bf3b"
+    },
+    {
+      "path": "game-source/tools/build.js",
+      "sha256": "eb6c54944a391450a43bf01faa298d4b3270f72139d91faeb014abe07ba926b4"
+    },
+    {
+      "path": "game-source/tools/make-auditions.js",
+      "sha256": "0d16688a96c638734ec23cd979fa735a960951d7843aca303a7b8663f3cf2715"
+    },
+    {
+      "path": "game-source/tools/make-dive.js",
+      "sha256": "0363eff5bdd95baf4af1334947319a0ad2478fc7e59c81329be6157c7cfb8991"
+    },
+    {
+      "path": "game-source/tools/make-flight.js",
+      "sha256": "07e6abe237ccf4d0f01efe906ce6d220a76c116b99b1589f23137a84a7c35b42"
+    },
+    {
+      "path": "game-source/tools/make-layout.js",
+      "sha256": "10e44cdf55397cd113f00828af07daa9f09ac8da2fc34c12b534ddd113f25bd1"
+    },
+    {
+      "path": "game-source/tools/make-logo.js",
+      "sha256": "3301ab6175dac53ffdb57fbdfee84d9cfa9342129b672727031f6c705a8f5621"
+    },
+    {
+      "path": "game-source/tools/make-presentation.js",
+      "sha256": "898c8376f34ba15cc4921ec3a9c237894b97adb6ba2d98482cbee321fedb1ad2"
+    },
+    {
+      "path": "game-source/tools/make-region-assets.js",
+      "sha256": "2ed4543f134bff8f0ab28565b66de5da3e5bbda607bb008b7a42a59f9ee496ab"
+    },
+    {
+      "path": "game-source/tools/make-soundtrack.js",
+      "sha256": "1565e4375b5cb0aa0467203b8b8a02200516bd9ce34ef991d15320b8879c5bd7"
+    },
+    {
+      "path": "game-source/tools/make-sprites.js",
+      "sha256": "9e681b23a3560aa8e885beac45b306e482f1aac9b7434a963cb3e07f2648bb9d"
+    },
+    {
+      "path": "game-source/tools/make-tiles.js",
+      "sha256": "4ccd049d17d9e0e77243a56996c4e3d4789b15bad3960b36fede3b9a75db0ef2"
+    },
+    {
+      "path": "game-source/tools/make-title-mmc3.js",
+      "sha256": "235d7375f9e9cb0523b7c91f46aaffea0f0f857b3901330917fde59675b0d138"
+    },
+    {
+      "path": "game-source/tools/make-victory.js",
+      "sha256": "178d7d33bbd994f66021ee126982313e4afcd20540b778b710128876e59c1244"
+    },
+    {
+      "path": "game-source/tools/pack-rom.js",
+      "sha256": "b54bed71cd5be6fd2577314d28f9af706b665c1f43f2ce4433115548202d029f"
+    },
+    {
+      "path": "game-source/tools/png.js",
+      "sha256": "b170672291f8f8d0ac1e90ec209a6dbc70e4993309ba21c0af00f6e553d449a9"
+    },
+    {
+      "path": "game-source/tools/project-files.js",
+      "sha256": "71f66cca089fc8f0bb108e4156d386cc4efe9116840b45002b370f66e714d3ea"
+    },
+    {
+      "path": "game-source/tools/render-title.js",
+      "sha256": "f9676cf050ad647b96ca799ad9104ea6ce7b79f5655d2ca1f35d841de20a8dee"
+    },
+    {
+      "path": "game-source/tools/stage-package.js",
+      "sha256": "3bd97ac6cd55254a3810bafd4eab3d40563c101c180541ac9e8be934d5825c7c"
+    },
+    {
+      "path": "icon.cjs",
+      "sha256": "c1add56b15f3a1f72d94679dbb70ed7f74574b1d788d2b296b971903e682fbf6"
+    },
+    {
+      "path": "launcher/bin/build.json",
+      "sha256": "273f6880e70d8e34ba6b96597fae66895cb41c9b9fbbdff0c6c9de21da572df5"
+    },
+    {
+      "path": "launcher/bin/Turbo ffmpegger.exe",
+      "sha256": "deca6fecb40f22c3fc7f4efe472c114e5f1415e85ad8df83b6f804d675d8c1a4"
+    },
+    {
+      "path": "launcher/bin/turbo-ffmpegger",
+      "sha256": "2a69bc2a990e339c8177e9c8d797f81fe06c7fac63bc78faa686ddd14d86e853"
+    },
+    {
+      "path": "launcher/build.cjs",
+      "sha256": "bda305bacf184959b4f025b8d9d6eddbf14311c0b24f198f4ac849cbd8b65657"
+    },
+    {
+      "path": "launcher/launcher.manifest",
+      "sha256": "dc7b725c5f113b93c350814e322d6599800b3e5b4f031cc5ed606c85eedfb0ec"
+    },
+    {
+      "path": "launcher/linux.c",
+      "sha256": "a1379f3a36ad77e406b4e38dbe3aac5e4eaee50b4ae9474b83111c54220b39ff"
+    },
+    {
+      "path": "launcher/TOOLCHAIN.json",
+      "sha256": "1288931598ad6f94c00f047d2e83194ae759796da39a1ab108beed499734908e"
+    },
+    {
+      "path": "launcher/windows.c",
+      "sha256": "2949c040f3a35cb24ebce7be2ae7af2cac7a7137ab06a9a083f5caa9705c5c04"
+    },
+    {
+      "path": "licenses/fflate-LICENSE.txt",
+      "sha256": "0a1df3a083d0c010560aa342e87959c8c1070e6fd54545741f083f22d0c8b551"
+    },
+    {
+      "path": "licenses/JSNES-LICENSE.txt",
+      "sha256": "530136cec696ac1fcdeb792a77472cb273f9f814ad0ed795dccdc95db7423e0a"
+    },
+    {
+      "path": "licenses/mingw-NOTICE.txt",
+      "sha256": "99a69660981156c21336fdb5661f89341b013c94e4bf9e1c7467b4745718397f"
+    },
+    {
+      "path": "licenses/musl-LICENSE.txt",
+      "sha256": "f9bc4423732350eb0b3f7ed7e91d530298476f8fec0c6c427a1c04ade22655af"
+    },
+    {
+      "path": "licenses/THIRD-PARTY-NOTICES.txt",
+      "sha256": "25c549d94ecef3fe51319d21451c161aad76b8b980be4297c2b1fa78013654c4"
+    },
+    {
+      "path": "licenses/Zig-LICENSE.txt",
+      "sha256": "5c537d6853e005298a285d508cff9ac7192cea23576c840d485b2b586a7ff177"
+    },
+    {
+      "path": "package-github.cjs",
+      "sha256": "2341d8f8468823706920d34e8c9316772886957e6efaee746205d3669e6720db"
+    },
+    {
+      "path": "package-layout.cjs",
+      "sha256": "17b9e057e0a417489423581563a72e20ac271c49ce7e83ff0fcb791b7a8de079"
+    },
+    {
+      "path": "package-source.cjs",
+      "sha256": "33cc2dae37f55c31701bd42dc54490480040939a153d379d1d0be9b3c70f66e2"
+    },
+    {
+      "path": "package.cjs",
+      "sha256": "60be6ae02236ddbfd50c6de0e117d50e5b0ba2d8a0321e4efe24620e7aa54119"
+    },
+    {
+      "path": "prepare-release.cjs",
+      "sha256": "2569b8c7d9fd4a7dd6e67c7ee25723f357d54badeccf5fe3d4cc2a7793b70dcf"
+    },
+    {
+      "path": "previews/aurora-comparison.png",
+      "sha256": "d8a5d829cd8aff252709c96844da5dc35c67f98f825417d31d5579766a1bac0d"
+    },
+    {
+      "path": "previews/aurora-dark.png",
+      "sha256": "2260606b03c8aa8a283ff8f0ac67d8098b9cd4df7dc4c1c3f6032e8079f88a04"
+    },
+    {
+      "path": "previews/aurora-light.png",
+      "sha256": "38aaf1e6fad7dccfd4772708ed4b21942881298de938412fe9fcf79357bc52b6"
+    },
+    {
+      "path": "previews/aurora-render-results.json",
+      "sha256": "53d5d39ff02bfdd0955919eac236aee297cd63ee76a8ab28fe5aaacc5856214f"
+    },
+    {
+      "path": "previews/aurora-wide.png",
+      "sha256": "d742e8fb9df20abd4ece86b80efbcf0ecfc6aed90e9c1fe1f60bd9a75c853d1d"
+    },
+    {
+      "path": "previews/background-futuristic-meteor.png",
+      "sha256": "c0f2d44632094a0b74693b31cb866c98593b7a01da732f269e45d40aa04a1284"
+    },
+    {
+      "path": "previews/backgrounds-comparison.png",
+      "sha256": "dce3c75b40293c2074f0d85af7867daab7d1f53e135de669fa1a3c2b2d0e1e50"
+    },
+    {
+      "path": "previews/backgrounds-dark.png",
+      "sha256": "43e16b92c7644e9685eb7c9bd8b0f1ca6eafeba22ce21a62c2681dac8e115120"
+    },
+    {
+      "path": "previews/backgrounds-light.png",
+      "sha256": "90456460b28fa3230aac633f6bced06b6f3784c0101768deff659cd8f77f088e"
+    },
+    {
+      "path": "previews/backgrounds-render-results.json",
+      "sha256": "7f46699c6b8437d5091827fbef864c035589ffb07406ce3cbc39922872e6dcd1"
+    },
+    {
+      "path": "previews/backgrounds-wide.png",
+      "sha256": "10e9ba439812ff6e2e29d5afac61865f90dbecbb7f29c9570bc4b24fa35d16e7"
+    },
+    {
+      "path": "previews/render-aurora.cjs",
+      "sha256": "3acaa5c6d9da3effaf29d6690d8d004c20b0177d355f6da4dccb77efb6a429e5"
+    },
+    {
+      "path": "previews/render-backgrounds.cjs",
+      "sha256": "641b2da233534153f3f9978f2820859029e93472f137b122844d54fb9cc7cfba"
+    },
+    {
+      "path": "previews/ui-checks.json",
+      "sha256": "f65099cde4613a733f40a8edf5c97a513fe7f7763c2ab6ec1787871cc65c660e"
+    },
+    {
+      "path": "queue-verification.json",
+      "sha256": "6ce0210f8e06c69ea3fa96db83ad6d9690d955237582224dd8d95ebd52801ec8"
+    },
+    {
+      "path": "README-GITHUB.md",
+      "sha256": "087d3fc5a9a0e94307855fcc948e2bb2a3af5fb190355b5081f1b159f2fb1d43"
+    },
+    {
+      "path": "README.md",
+      "sha256": "91411f2579e7256f2a5129b02010b0a1e5e845e96ad8eb80acf0b0809c35d59c"
+    },
+    {
+      "path": "RELEASE-NOTES.md",
+      "sha256": "4070908aaa12ea47f0e2e027da5e0a5d1f2fb831ccf2682d94bb251e42b790d3"
+    },
+    {
+      "path": "seed-data/custom_presets.json",
+      "sha256": "1b7a6afb58ce9d1ab0dd41e566d637dbc98647399002c198af5943c6f362a794"
+    },
+    {
+      "path": "seed-data/presets.json",
+      "sha256": "9404e0271941b406885c87b164f719ba53a80bd90fc7079d99cd2ff8cdb90ee1"
+    },
+    {
+      "path": "seed-data/settings.json",
+      "sha256": "0a221b3c1cccff990b16a50e1c92dd6d43407f16e8082d384ee24b9d23efa048"
+    },
+    {
+      "path": "START HERE.txt",
+      "sha256": "00464703a5b9f006a713ac4fb77867dbf47feac1ad28f565bfe89ce04c62334c"
+    },
+    {
+      "path": "tests/audio-adapter.cjs",
+      "sha256": "f0d3919cb8715aa1320b0be8d11fd0cdbf3bfcad7638897df10e3065ce310480"
+    },
+    {
+      "path": "tests/audio-results.json",
+      "sha256": "78043c36034fea40e8a7d9abe1c267b2b76bd27532b846475dfeaf855817b0d9"
+    },
+    {
+      "path": "tests/audio.cjs",
+      "sha256": "3cf0acf1ab36a51fec3c9c7b98d709d3e62bffa44cda014c16af644a728c9820"
+    },
+    {
+      "path": "tests/checkpoint-executable-results.json",
+      "sha256": "aac3b62855b791f956dbab528ef26d4174d357ce3bb943b737975e220d8ff27a"
+    },
+    {
+      "path": "tests/core-results.json",
+      "sha256": "ac67249951c2120868e804f785bb1fd6c29e80e05b8b61015372f7d72f7d84f5"
+    },
+    {
+      "path": "tests/core.cjs",
+      "sha256": "0fb1cf19e4c16d0c58f08481eca17562584f94f8c7293396fc92cf42a4600c20"
+    },
+    {
+      "path": "tests/executable.cjs",
+      "sha256": "b1f73381912e61f09ee95dd411f1da479876f1b3665d87f7e5ecf2b59b0efccb"
+    },
+    {
+      "path": "tests/external-tools-results.json",
+      "sha256": "a0e75d216e1b5a2dac51a28e85fc31731626dcf1240036845dddce3e165bafeb"
+    },
+    {
+      "path": "tests/external-tools.cjs",
+      "sha256": "c6358c2c56789911cdaab3213a26b288d869f3db46f39788a70751a365930826"
+    },
+    {
+      "path": "tests/game-lifecycle-results.json",
+      "sha256": "e5c9c5102f1c1810c038e2f5efc8547fd5075eaeddcb00142283436cfea3d1a1"
+    },
+    {
+      "path": "tests/game-lifecycle.cjs",
+      "sha256": "40140b45efb669259ad745bcbc880ed04559c7545a69afbf25d177981ea44c33"
+    },
+    {
+      "path": "tests/game-recovery-results.json",
+      "sha256": "2e241acaa03d823483783ea6715231e87f830fce7eb5756e2f0c1a0ee47f68d9"
+    },
+    {
+      "path": "tests/game-recovery.cjs",
+      "sha256": "44d60f17d1da8f682e033a89e43c00ffaeef471b9292c3d0f757ff7a839f27de"
+    },
+    {
+      "path": "tests/game-results.json",
+      "sha256": "d3c545181bc3b6b7f568304b319f9805ed64943dd0fcaef040aa677b2c65a067"
+    },
+    {
+      "path": "tests/game.cjs",
+      "sha256": "a8ed965c3ba0ede54371796b19a2a471469d6a60f8874d3d81e24afc02ef98c4"
+    },
+    {
+      "path": "tests/github-bundle.cjs",
+      "sha256": "8be6088388e2aa20fa0e636d5a40d1e07bdbefede1eecdd893e7fc1e93167974"
+    },
+    {
+      "path": "tests/packaged-runtime.cjs",
+      "sha256": "421ed0bf50bddf1acfac6169603713f0e97287c3ff43fab65c9f0cbc1505635c"
+    },
+    {
+      "path": "tests/packages.cjs",
+      "sha256": "95d971b41e992f945b93029e4b767d68b167208a3adf18457918aa3f226ded01"
+    },
+    {
+      "path": "tests/performance-results.json",
+      "sha256": "cceec8f39d662eeaea65d03828a32dc69711ef30d9381e0ed4e5ae56dad11025"
+    },
+    {
+      "path": "tests/performance.cjs",
+      "sha256": "351e61f708b7a4efc497852c7183a1e1bb004c1559f561993b44995ee44a2d40"
+    },
+    {
+      "path": "tests/popups-results.json",
+      "sha256": "ba7bb195adc3cf4d8fe7dad3fc0de938af84209d97ffbf8a5306213d64dc3338"
+    },
+    {
+      "path": "tests/popups.cjs",
+      "sha256": "07b342ab71ca624c30487565bad359b1f3e76265f059c9e7216500403738540d"
+    },
+    {
+      "path": "tests/preferences-results.json",
+      "sha256": "a74e7d0014d65ac3cf7e3da018e7ec83a35ee40a82f6ae558d00640d2c194b4c"
+    },
+    {
+      "path": "tests/preferences.cjs",
+      "sha256": "b9d8837904bcbcc052faf6cc20c06beba735bae52f83d6d552d1d130abcc072c"
+    },
+    {
+      "path": "tests/release-artifacts.cjs",
+      "sha256": "90a553be235f3d2fb47d462908329d523fdd0bc5d55f3b7799a1e764af78f3b3"
+    },
+    {
+      "path": "tests/release-layout.cjs",
+      "sha256": "816e8958c0da78015193f98c2802d78a3f16750cd16401659d5c6e8e3194c7d6"
+    },
+    {
+      "path": "tests/renderer.cjs",
+      "sha256": "80a3902e3a0633ce7fa3c53a671ace1111531fa7ad9af9cc786f59180185ed11"
+    },
+    {
+      "path": "tests/run-renderer.cjs",
+      "sha256": "860c59f3212b19650d1e45b10f86a0cdab2e2d3a9eab773fe6e95805f7ddb979"
+    },
+    {
+      "path": "tests/simple-mode-results.json",
+      "sha256": "d6ef61d364abde301ab332d9ee2c5c690f5a04eed599f2f79ecb25fd7dda78e2"
+    },
+    {
+      "path": "tests/simple-mode.cjs",
+      "sha256": "55bca936efee62247d5fc294ca1a9dbfecf1daeac941c4708a49dffef110be13"
+    },
+    {
+      "path": "tests/ui-source.cjs",
+      "sha256": "ffa881cebcbdd72fcb04306586090d33f66b9672187cf6d882457b4da226e75b"
+    },
+    {
+      "path": "tests/versions-results.json",
+      "sha256": "00a9d0ee24c391673d5ad2b15ea0066c8363c79415e0cc3fd4972a78a80c6082"
+    },
+    {
+      "path": "tests/versions.cjs",
+      "sha256": "4bd688724fe9c02cc757d9fc8843873c0e4249f9348dcaff06417e7773d8d0dc"
+    },
+    {
+      "path": "tests/worker-adapter.cjs",
+      "sha256": "8d6909edddb1c6b6ee05a51ca3d6226037673868923c27803d662c00385cb54b"
+    },
+    {
+      "path": "validation/Turbo-ffmpegger-1.0.0-alpha-Executable-checks.json",
+      "sha256": "8f0509383461dcab0cc84af44b8c02d3a44acb99689c82efb2ca347238f9d316"
+    },
+    {
+      "path": "validation/Turbo-ffmpegger-1.0.0-alpha-Layout-checks.json",
+      "sha256": "bb13b7a1ab929d9292fb18b302aeb36a5b7f6a4e18eba157696ab8be0fde007f"
+    },
+    {
+      "path": "validation/Turbo-ffmpegger-1.0.0-alpha-Package-checks.json",
+      "sha256": "e6692e916edea37d8ac56c62f2bca297f7e44e3209b5b2947a29f78da8b6c674"
+    },
+    {
+      "path": "validation/Turbo-ffmpegger-1.0.0-alpha-packages.json",
+      "sha256": "1c532bd41e09b630216c50c83b6a7265d4baa11b3c93c3f00b8b9d99e8ff1a0b"
+    },
+    {
+      "path": "validation/Turbo-ffmpegger-1.0.0-alpha-Runtime-checks.json",
+      "sha256": "7a884325e8d3d713f4f6729aefb9db6d6f4848dba34b497db0853d357080d7d7"
+    },
+    {
+      "path": "validation/Turbo-ffmpegger-1.0.0-alpha-Version-checks.json",
+      "sha256": "00a9d0ee24c391673d5ad2b15ea0066c8363c79415e0cc3fd4972a78a80c6082"
+    },
+    {
+      "path": "Verification.json",
+      "sha256": "4e93b3c086513e2ae539b0c0d233fbfb08cd1af16b657b76b53f07838c7b1b8d"
+    },
+    {
+      "path": "verify-queue.mjs",
+      "sha256": "cb62c59de656544c904c46edd1395dd6a3d6beb44e50ce679a16dd507db5acf4"
+    }
+  ]
+}

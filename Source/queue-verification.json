@@ -1,0 +1,22 @@
+{
+  "success": true,
+  "method": "Production queue functions tested in Node.js without opening an app or using desktop input.",
+  "checks": [
+    "done video keeps its selection control",
+    "done video accepts a new template and converts from its original source",
+    "cancelled video keeps its selection control",
+    "cancelled video accepts a new template and converts from its original source",
+    "error video keeps its selection control",
+    "error video accepts a new template and converts from its original source",
+    "pending video keeps its selection control",
+    "pending video accepts a new template and converts from its original source",
+    "Running video cannot be selected or have its template changed",
+    "Only selected applies to finished and aborted videos without changing other rows",
+    "Apply to all requeues every available video and leaves the active conversion alone",
+    "A video that begins running while a template dialog is open remains unchanged",
+    "Completed selected videos are not implicitly rerun by Convert",
+    "Explicit rerun retains the assigned template and original source",
+    "Changing a template during another conversion waits for the queue",
+    "Requeue preserves image-sequence source information"
+  ]
+}

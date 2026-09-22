@@ -1,0 +1,6 @@
+{
+  "version": "1.0.0-alpha",
+  "compiler": "Zig 0.15.2",
+  "windowsSha256": "deca6fecb40f22c3fc7f4efe472c114e5f1415e85ad8df83b6f804d675d8c1a4",
+  "linuxSha256": "2a69bc2a990e339c8177e9c8d797f81fe06c7fac63bc78faa686ddd14d86e853"
+}

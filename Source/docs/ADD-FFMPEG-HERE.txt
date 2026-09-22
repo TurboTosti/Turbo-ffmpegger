@@ -1,0 +1,21 @@
+Add your own conversion tools to this folder.
+
+Windows x64: ffmpeg.exe and ffprobe.exe
+Linux x64:   ffmpeg and ffprobe (both must be executable)
+
+Download a matching pair from the same build. For download links and detailed
+instructions, see Help/FFmpeg-setup.md in the application folder or:
+https://ffmpeg.org/download.html
+
+These conversion programs are deliberately NOT included in this package.
+The interface and Voidbreaker can open without them; conversion and media
+inspection require them. No automatic download or PATH search is performed.
+
+Use App/resources/tools in the ORIGINAL portable application folder, beside
+the top-level launcher. Do not put the tools inside Versions: application
+updates continue using this original tools folder.
+
+Keep any supporting DLLs/shared libraries and license notices required by
+your chosen build. A self-contained static build is easiest to move between
+computers. Do not replace App/ffmpeg.dll or App/libffmpeg.so: those are separate
+Electron runtime libraries, not the conversion programs.

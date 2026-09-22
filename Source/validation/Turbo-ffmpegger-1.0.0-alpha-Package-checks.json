@@ -1,0 +1,24 @@
+{
+  "success": true,
+  "results": [
+    {
+      "platform": "win32",
+      "verifiedFiles": 63,
+      "zipEntries": 67,
+      "bytes": 149273599,
+      "manifestAndArchiveChecksums": true,
+      "x64Executable": true,
+      "portableDataSeed": true
+    },
+    {
+      "platform": "linux",
+      "verifiedFiles": 63,
+      "zipEntries": 67,
+      "bytes": 122619300,
+      "manifestAndArchiveChecksums": true,
+      "x64Executable": true,
+      "portableDataSeed": true,
+      "linuxExecutablePermissions": true
+    }
+  ]
+}

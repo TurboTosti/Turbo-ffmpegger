@@ -1,0 +1,20 @@
+{
+  "success": true,
+  "version": "1.0.0-alpha",
+  "displayVersion": "1.0 alpha",
+  "releaseTag": "v1.0-alpha",
+  "checks": [
+    "Public label and short Git tag match the canonical package version",
+    "Alpha ordering follows 0.8, supports numbered previews and eventual stable",
+    "Invalid versions and unsafe path-like tags are rejected",
+    "GitHub prerelease 1.0 alpha is discovered from the previous 0.8 alpha",
+    "Alpha users receive newer previews; equal and old releases are ignored",
+    "Stable installations ignore previews regardless of GitHub flag",
+    "Drafts, foreign downloads, source ZIPs and wrong platforms stay excluded",
+    "Copied private 2.0.x pointers cannot reopen a development build",
+    "A short Git tag stages its canonical alpha manifest and keeps Data intact",
+    "Alpha packages still reject traversal, Data writes and version mismatch",
+    "Current public package matches exactly v1.0-alpha and does not bypass version ordering"
+  ],
+  "method": "Background synthetic files and release data only; no real profile, network, GUI or audio."
+}

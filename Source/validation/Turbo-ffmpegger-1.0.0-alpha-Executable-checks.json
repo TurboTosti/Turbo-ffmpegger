@@ -1,0 +1,14 @@
+{
+  "success": true,
+  "version": "1.0.0-alpha",
+  "checks": [
+    "Native launcher starts bundled runtime; quoted/Unicode arguments, stdin and original update Data root survive",
+    "Child exit status is preserved",
+    "Moving the complete folder to a path with spaces, symbols and Japanese characters works",
+    "Launcher imports only built-in Windows APIs; no .NET or extra C runtime dependency",
+    "Linux launcher is statically linked x64 ELF (structural check only)"
+  ],
+  "windowsLauncherBytes": 59392,
+  "linuxLauncherBytes": 8248,
+  "method": "Native Windows launcher and bundled Electron in Node mode, no GUI/audio/desktop input. Linux executable inspected, not run."
+}

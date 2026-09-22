@@ -1,0 +1,9 @@
+{
+  "name": "turbo-ffmpegger",
+  "productName": "Turbo ffmpegger",
+  "version": "1.0.0-alpha",
+  "main": "main.cjs",
+  "private": true,
+  "description": "Portable video conversion with Voidbreaker",
+  "license": "UNLICENSED"
+}
