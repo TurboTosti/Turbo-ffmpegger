@@ -1,5 +1,7 @@
 # Turbo ffmpegger
 
+> **Upgrading from a version older than 1.0, such as 0.8 alpha? Please download the new version manually from [GitHub Releases](https://github.com/TurboTosti/Turbo-ffmpegger/releases).** The old updater may report success without actually installing the new desktop application. Extract the download into a new folder, keep your old folder as a backup, and follow the [manual upgrade instructions](#manual-upgrade) below to transfer your templates and settings.
+
 **Portable video conversion for Windows and Linux — with templates, a Simple mode, and Voidbreaker to play while you wait.**
 
 Turbo ffmpegger puts FFmpeg behind a desktop interface. Drop in your media, choose a template, and convert. Keep your custom templates, preferences and game progress together in one portable folder.

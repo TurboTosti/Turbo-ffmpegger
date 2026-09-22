@@ -1,0 +1,28 @@
+# Upload these as GitHub Release attachments, not Git commits.
+/Windows/*.zip
+/Linux/*.zip
+
+# User-supplied conversion programs: never commit these files.
+[Ff][Ff][Mm][Pp][Ee][Gg]
+[Ff][Ff][Pp][Rr][Oo][Bb][Ee]
+[Ff][Ff][Mm][Pp][Ee][Gg].[Ee][Xx][Ee]
+[Ff][Ff][Pp][Rr][Oo][Bb][Ee].[Ee][Xx][Ee]
+
+# Local extractions, user data, dependencies and build outputs.
+/Windows/*/
+/Linux/*/
+Data/
+Versions/
+node_modules/
+Source/runtime/
+Source/dist/
+Source/source-staging/
+Source/tools/
+Source/package-inputs.json
+Source/package-lock.json
+Source/launcher/toolchain/
+Source/launcher/cache*/
+Source/launcher/temp/
+Source/launcher/launcher.rc
+Source/launcher/bin/*.res
+Source/tests/*/
